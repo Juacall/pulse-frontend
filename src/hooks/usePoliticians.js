@@ -9,33 +9,55 @@ function normalizeParty(partyStr) {
   return "Independent";
 }
 
+/**
+ * Calculates approval rating percentage from sentiment stats.
+ * Returns "N/A" if total votes are <= minVotes (default 5).
+ */
+function calculateApprovalRating(sentimentStats, minVotes = 5) {
+  const approve = Number(sentimentStats?.approve) || 0;
+  const disapprove = Number(sentimentStats?.disapprove) || 0;
+  const neutral = Number(sentimentStats?.neutral) || 0;
+  const totalVotes = approve + disapprove + neutral;
+
+  // Stays "N/A" for 0, 1, 2, 3, 4, and 5 votes
+  if (totalVotes <= minVotes) {
+    return "N/A";
+  }
+
+  const totalOpinion = approve + disapprove;
+  if (totalOpinion === 0) {
+    return "N/A";
+  }
+
+  return Math.round((approve / totalOpinion) * 100);
+}
+
 function enrichPolitician(p) {
   const stateCode = p.state || "US";
   const stateName = (STATE_NAMES && STATE_NAMES[stateCode]) || stateCode;
+
+  // Read actual backend sentiment stats or default to clean zero state
+  const sentimentStats = p.sentimentStats || { approve: 0, disapprove: 0, neutral: 0 };
+
+  // Always compute metrics dynamically on the client
+  const approvalRating = calculateApprovalRating(sentimentStats, 5);
+
   return {
     ...p,
     party: normalizeParty(p.party),
     stateName,
     bio: `${p.name} represents ${stateName} in the U.S. ${p.chamber || "Congress"}.`,
+    sentimentStats,
     metrics: {
       sponsoredCount: p.sponsoredCount || 0,
       cosponsoredCount: p.cosponsoredCount || 0,
       passRate: p.passRate ?? null,
-      approvalRating: 58,
+      approvalRating, // Single source of truth for cards and drawer
     },
-    sponsoredBills: [],
-    sentimentStats: { approve: 120, disapprove: 45, neutral: 15 },
-    userComments: [],
+    sponsoredBills: p.sponsoredBills || [],
+    userComments: p.userComments || [],
   };
 }
-
-const incrementVote = (p, voteType) => ({
-  ...p,
-  sentimentStats: {
-    ...p.sentimentStats,
-    [voteType]: (p.sentimentStats[voteType] || 0) + 1,
-  },
-});
 
 export function usePoliticians({
                                  selectedState = "ALL",
@@ -44,7 +66,7 @@ export function usePoliticians({
                                  selectedParty = "ALL",
                                }) {
   const [politicians, setPoliticians] = useState([]);
-  const [status, setStatus] = useState("loading"); // "loading" | "loaded" | "error"
+  const [status, setStatus] = useState("loading");
   const [selectedPolitician, setSelectedPolitician] = useState(null);
 
   useEffect(() => {
@@ -104,12 +126,29 @@ export function usePoliticians({
     };
   }, [selectedState, politicians]);
 
-  const handleVote = (politicianId, voteType) => {
+  /**
+   * Accepts authoritative server sentimentStats returned from POST /api/vote
+   */
+  const handleVote = (politicianId, updatedSentimentStats) => {
+    if (!updatedSentimentStats) return;
+
+    const newApprovalRating = calculateApprovalRating(updatedSentimentStats, 5);
+
+    const updateRecord = (p) => ({
+      ...p,
+      sentimentStats: updatedSentimentStats,
+      metrics: {
+        ...p.metrics,
+        approvalRating: newApprovalRating,
+      },
+    });
+
     setPoliticians((prev) =>
-        prev.map((p) => (p.id === politicianId ? incrementVote(p, voteType) : p))
+        prev.map((p) => (p.id === politicianId ? updateRecord(p) : p))
     );
+
     setSelectedPolitician((prev) =>
-        prev && prev.id === politicianId ? incrementVote(prev, voteType) : prev
+        prev && prev.id === politicianId ? updateRecord(prev) : prev
     );
   };
 

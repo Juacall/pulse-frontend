@@ -18,6 +18,7 @@ export function AuthModalProvider({ children }) {
         <AuthModalContext.Provider value={{ openAuthModal, closeAuthModal, isOpen }}>
             {children}
             <AuthModal
+                key={`${isOpen}-${mode}`}
                 isOpen={isOpen}
                 mode={mode}
                 setMode={setMode}

@@ -12,9 +12,10 @@ export function PoliticianCard({ politician: p, onSelect }) {
   const missedPercentage = getMissedPercentage(p.rollCallVotes);
   const isHighAbsence = (missedPercentage ?? 0) > HIGH_ABSENCE_THRESHOLD;
 
-  const totalVotes = p.sentimentStats.approve + p.sentimentStats.disapprove + p.sentimentStats.neutral;
-  const approvePct = totalVotes ? Math.round((p.sentimentStats.approve / totalVotes) * 100) : 50;
-
+  // Use metrics.approvalRating from hook or calculate directly with "N/A" fallback
+  const approvalDisplay = (p.metrics?.approvalRating === "N/A" || p.metrics?.approvalRating == null)
+      ? "N/A"
+      : `${p.metrics.approvalRating}%`;
   return (
       <div
           onClick={() => onSelect(p)}
@@ -79,7 +80,9 @@ export function PoliticianCard({ politician: p, onSelect }) {
             </div>
             <div>
               <span className="text-[10px] text-slate-500 block uppercase font-medium">Public Appr.</span>
-              <span className="text-xs font-bold text-cyan-400">{approvePct}%</span>
+              <span className={`text-xs font-bold ${approvalDisplay === 'N/A' ? 'text-slate-400' : 'text-cyan-400'}`}>
+                {approvalDisplay}
+              </span>
             </div>
           </div>
         </div>
