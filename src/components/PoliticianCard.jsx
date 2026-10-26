@@ -50,6 +50,7 @@ export function PoliticianCard({ politician: p, onSelect }) {
               <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${partyBadgeClass(p.party)}`}>
                 {p.party}
               </span>
+              {missedPercentage != null && (
               <span
                   title="Share of roll call votes missed"
                   className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
@@ -60,6 +61,7 @@ export function PoliticianCard({ politician: p, onSelect }) {
               >
                 Absence · {missedPercentage == null ? "N/A" : `${Number(missedPercentage).toFixed(1)}%`}
               </span>
+              )}
             </div>
           </div>
 
