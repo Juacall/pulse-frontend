@@ -181,7 +181,7 @@ export function AuthModal({ isOpen, mode, setMode, onClose }) {
                             </h3>
                             <p className="text-xs text-slate-400">
                                 {mode === 'login'
-                                    ? 'Access your profile, vote history, and AI console.'
+                                    ? 'Access your profile, vote history, and AI Search.'
                                     : 'Join to participate in congressional analytics.'}
                             </p>
                         </div>

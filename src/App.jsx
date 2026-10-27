@@ -38,6 +38,7 @@ export default function App() {
         setSelectedParty("ALL");
     };
 
+
     return (
         <ToastProvider>
             <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-slate-950">
@@ -55,6 +56,7 @@ export default function App() {
                         selectedState={selectedState} onStateChange={setSelectedState}
                         selectedChamber={selectedChamber} onChamberChange={setSelectedChamber}
                         selectedParty={selectedParty} onPartyChange={setSelectedParty}
+                        politicians={filteredPoliticians}
                     />
 
                     <PoliticianGrid

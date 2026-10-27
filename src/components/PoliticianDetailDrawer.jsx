@@ -6,8 +6,9 @@ import { PoliticianActionButtons } from './PoliticianActionButtons.jsx';
 import { VoteComponent } from './VoteComponent.jsx';
 import { getMemberImageUrl } from '../utils/image';
 import { partyBadgeClass } from '../utils/party';
+import { getFallbackAvatar } from "../utils/avatar"; // Dynamic SVG fallback
 
-const FALLBACK_MEMBER_IMAGE = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80";
+
 
 export function PoliticianDetailDrawer({
                                            selectedPolitician,
@@ -40,7 +41,7 @@ export function PoliticianDetailDrawer({
                             alt={selectedPolitician.name}
                             onError={(e) => {
                                 e.currentTarget.onerror = null;
-                                e.currentTarget.src = FALLBACK_MEMBER_IMAGE;
+                                e.currentTarget.src = getFallbackAvatar(selectedPolitician.name, selectedPolitician.party);
                             }}
                             className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-cyan-500/50 shadow-lg flex-shrink-0"
                         />

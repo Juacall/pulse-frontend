@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import { Search } from 'lucide-react';
 import { STATE_OPTIONS } from "../constants/states";
 
@@ -6,8 +6,19 @@ export function PoliticianFilters({
                                     searchQuery, onSearchChange,
                                     selectedState, onStateChange,
                                     selectedChamber, onChamberChange,
-                                    selectedParty, onPartyChange
+                                    selectedParty, onPartyChange,
+                                      politicians = [],
                                   }) {
+
+    const partyOptions = useMemo(() => {
+        const parties = new Set(
+            politicians
+                .map((p) => p.party)
+                .filter((party) => Boolean(party) && party.trim() !== '')
+        );
+        return Array.from(parties).sort();
+    }, [politicians]);
+
   return (
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-8 shadow-xl">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -59,9 +70,11 @@ export function PoliticianFilters({
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-300 focus:outline-none focus:border-cyan-500"
             >
               <option value="ALL">All Parties</option>
-              <option value="Democrat">Democrat</option>
-              <option value="Republican">Republican</option>
-              <option value="Independent">Independent</option>
+                {partyOptions.map((party) => (
+                    <option key={party} value={party}>
+                        {party}
+                    </option>
+                ))}
             </select>
           </div>
 

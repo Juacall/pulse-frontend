@@ -47,7 +47,7 @@ export function Header({ setIsAiModalOpen, onOpenAccount }) {
                     className="flex items-center space-x-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-lg shadow-cyan-900/20 transition-all border border-cyan-400/30"
                 >
                     <Sparkles className="w-3.5 h-3.5 text-cyan-200" />
-                    <span>AI Console</span>
+                    <span>AI Search</span>
                 </button>
 
                 {/* Dynamic Auth / Account Button */}
