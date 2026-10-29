@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MinusCircle, ThumbsDown, ThumbsUp, Vote, LogIn, ShieldAlert } from 'lucide-react';
 import { useAuthModal } from "../hooks/useAuthModal.js";
 import { supabase } from "../lib/supabase.js";
@@ -15,14 +15,24 @@ export function VoteComponent({
                               }) {
     const [loading, setLoading] = useState(false);
     const [userVote, setUserVote] = useState(initialUserVote);
+
+    // Track local optimistic stance override and fallback fetched stats
+    const [optimisticVote, setOptimisticVote] = useState(null);
+    const [fetchedStats, setFetchedStats] = useState(null);
+    const [prevPoliticianId, setPrevPoliticianId] = useState(null);
+
     const { openAuthModal } = useAuthModal();
     const { showToast } = useToast();
 
     const activePoliticianId = politicianId || selectedPolitician?.id;
 
-    const [stats, setStats] = useState(() => {
-        return { approve: 0, neutral: 0, disapprove: 0 };
-    });
+    // Reset local vote state during render when switching politicians
+    if (activePoliticianId !== prevPoliticianId) {
+        setPrevPoliticianId(activePoliticianId);
+        setOptimisticVote(null);
+        setUserVote(initialUserVote);
+        setFetchedStats(null);
+    }
 
     const notify = (msg, type = 'success') => {
         if (showToast) {
@@ -32,9 +42,39 @@ export function VoteComponent({
         }
     };
 
-    // 1. Fetch initial vote counts from backend on mount
+    // 1. Determine baseline raw stats (Pre-hydrated prop > Fallback network fetch > Default 0)
+    const rawStats = selectedPolitician?.sentimentStats || fetchedStats;
+    const baseStats = useMemo(() => ({
+        approve: Number(rawStats?.approve) || 0,
+        neutral: Number(rawStats?.neutral) || 0,
+        disapprove: Number(rawStats?.disapprove) || 0,
+        totalVotes: Number(rawStats?.totalVotes) || 0,
+    }), [rawStats]);
+
+    // 2. Compute final displayed stats incorporating local optimistic vote adjustments
+    const stats = useMemo(() => {
+        if (!optimisticVote) return baseStats;
+
+        const updated = { ...baseStats };
+        const { newStance, previousStance } = optimisticVote;
+
+        if (previousStance && previousStance !== newStance && updated[previousStance] > 0) {
+            updated[previousStance] -= 1;
+        }
+
+        if (previousStance !== newStance) {
+            updated[newStance] = (updated[newStance] || 0) + 1;
+            if (!previousStance) {
+                updated.totalVotes = (updated.totalVotes || 0) + 1;
+            }
+        }
+
+        return updated;
+    }, [baseStats, optimisticVote]);
+
+    // 3. Fallback: Fetch vote stats only if pre-hydrated data is absent on selectedPolitician
     useEffect(() => {
-        if ( !activePoliticianId) return;
+        if (!activePoliticianId || selectedPolitician?.sentimentStats) return;
 
         let isSubscribed = true;
         const fetchVoteStats = async () => {
@@ -45,11 +85,7 @@ export function VoteComponent({
                 if (res.ok) {
                     const data = await res.json();
                     if (isSubscribed && data?.sentimentStats) {
-                        setStats({
-                            approve: data.sentimentStats.approve || 0,
-                            neutral: data.sentimentStats.neutral || 0,
-                            disapprove: data.sentimentStats.disapprove || 0,
-                        });
+                        setFetchedStats(data.sentimentStats);
                         onStatsLoaded?.(activePoliticianId, data.sentimentStats);
                     }
                 }
@@ -60,10 +96,10 @@ export function VoteComponent({
 
         fetchVoteStats();
         return () => { isSubscribed = false; };
-    }, [activePoliticianId]);
+    }, [activePoliticianId, selectedPolitician?.sentimentStats, onStatsLoaded]);
 
-    // 2. Compute dynamic bar percentages
-    const totalVotes = stats.approve + stats.neutral + stats.disapprove;
+    // 4. Compute dynamic bar percentages using backend totalVotes
+    const totalVotes = stats.totalVotes || (stats.approve + stats.neutral + stats.disapprove);
 
     const approvePct = totalVotes > 0 ? (stats.approve / totalVotes) * 100 : 0;
     const neutralPct = totalVotes > 0 ? (stats.neutral / totalVotes) * 100 : 100;
@@ -109,27 +145,6 @@ export function VoteComponent({
         }
     };
 
-    // Immediate local adjustment (no vote count inflation)
-    const applyOptimisticVote = (newStance) => {
-        setStats((prev) => {
-            const updated = { ...prev };
-
-            // If switching stances, subtract from previous choice
-            if (userVote && userVote !== newStance && updated[userVote] > 0) {
-                updated[userVote] -= 1;
-            }
-
-            // Increment new choice
-            if (userVote !== newStance) {
-                updated[newStance] = (updated[newStance] || 0) + 1;
-            }
-
-            return updated;
-        });
-
-        setUserVote(newStance);
-    };
-
     const handleVote = async (newStance) => {
         if (userVote === newStance) return;
 
@@ -160,10 +175,10 @@ export function VoteComponent({
         }
 
         const previousStance = userVote;
-        const previousStats = { ...stats };
 
-        // 3. Immediate local feedback
-        applyOptimisticVote(newStance);
+        // Apply instant optimistic UI mutation
+        setOptimisticVote({ newStance, previousStance });
+        setUserVote(newStance);
         setLoading(true);
 
         try {
@@ -183,24 +198,24 @@ export function VoteComponent({
             const data = await response.json();
 
             if (response.ok) {
-                // 4. Synchronize with exact server-returned totals
                 if (data.sentimentStats) {
-                    setStats(data.sentimentStats);
+                    setFetchedStats(data.sentimentStats);
                 }
                 if (data.user_vote) {
                     setUserVote(data.user_vote);
                 }
+                // Clear local optimistic override once backend responds
+                setOptimisticVote(null);
                 notify(`Vote for ${newStance.toUpperCase()} recorded!`, 'success');
-                // 👈 Pass the exact server-returned stats to update parent cards & drawer
-                onVote?.(activePoliticianId, data.sentimentStats);
+                onVote?.(activePoliticianId, data.sentimentStats || stats);
             } else {
                 throw new Error(data.detail || 'Server rejected vote');
             }
         } catch (e) {
             console.error("Voting submission error:", e);
-            // Rollback on failure
+            // Revert optimistic updates on network failure
             setUserVote(previousStance);
-            setStats(previousStats);
+            setOptimisticVote(null);
             notify(e.message || "Unable to reach voting server.", "error");
         } finally {
             setLoading(false);

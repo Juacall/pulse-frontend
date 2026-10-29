@@ -33,6 +33,11 @@ function enrichPolitician(p) {
   const sentimentStats = p.sentimentStats || { approve: 0, disapprove: 0, neutral: 0 };
   const approvalRating = calculateApprovalRating(sentimentStats, 5);
 
+  const approve = Number(sentimentStats?.approve) || 0;
+  const disapprove = Number(sentimentStats?.disapprove) || 0;
+  const neutral = Number(sentimentStats?.neutral) || 0;
+  const newTotalVotes = approve + disapprove + neutral;
+
   return {
     ...p,
     party: normalizeParty(p.party),
@@ -44,6 +49,8 @@ function enrichPolitician(p) {
       cosponsoredCount: p.cosponsoredCount || 0,
       passRate: p.passRate ?? null,
       approvalRating,
+      totalVotes: newTotalVotes,
+
     },
     sponsoredBills: p.sponsoredBills || [],
     userComments: p.userComments || [],
@@ -169,9 +176,6 @@ export function usePoliticians({
         const isIncumbent = p.isIncumbent === true || String(p.isIncumbent).toLowerCase() === "true";
         const statusStr = (p.status || "").toLowerCase();
         const target = selectedStatus.toLowerCase();
-        console.log(isIncumbent)
-        console.log(statusStr)
-        console.log(target)
 
         if (target === "incumbent" && !isIncumbent && statusStr !== "incumbent") {
           return false;
@@ -209,20 +213,42 @@ export function usePoliticians({
   const handleVote = (politicianId, updatedSentimentStats) => {
     if (!updatedSentimentStats) return;
 
+    const approve = Number(updatedSentimentStats?.approve) || 0;
+    const disapprove = Number(updatedSentimentStats?.disapprove) || 0;
+    const neutral = Number(updatedSentimentStats?.neutral) || 0;
+    const newTotalVotes = approve + disapprove + neutral;
+
     const newApprovalRating = calculateApprovalRating(updatedSentimentStats, 5);
 
-    const updateRecord = (p) => ({
-      ...p,
-      sentimentStats: updatedSentimentStats,
-      metrics: {
-        ...p.metrics,
-        approvalRating: newApprovalRating,
-      },
-    });
+    const updateRecord = (p) => {
+      // Immutably clone and attach totalVotes to sentimentStats
+      const nextSentimentStats = {
+        ...updatedSentimentStats,
+        totalVotes: newTotalVotes,
+      };
+
+      return {
+        ...p,
+        sentimentStats: nextSentimentStats,
+        totalVotes: newTotalVotes, // Preserved at top-level if needed
+        metrics: {
+          ...p.metrics,
+          approvalRating: newApprovalRating,
+        },
+      };
+    };
 
     setRawPoliticians((prev) => prev.map((p) => (p.id === politicianId ? updateRecord(p) : p)));
     setSearchResults((prev) => prev.map((p) => (p.id === politicianId ? updateRecord(p) : p)));
     setSelectedPolitician((prev) => (prev && prev.id === politicianId ? updateRecord(prev) : prev));
+
+
+    // 2. Synchronize memory cache
+    Object.keys(cacheRef.current).forEach((stateKey) => {
+      cacheRef.current[stateKey] = cacheRef.current[stateKey].map((p) =>
+          p.id === politicianId ? updateRecord(p) : p
+      );
+    });
   };
 
   return {
