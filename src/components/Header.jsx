@@ -1,7 +1,8 @@
 import React from 'react';
-import { Sparkles, User, UserCheck } from 'lucide-react';
-import { useAuthModal } from "../hooks/useAuthModal.js";
-import { useAuth } from "../hooks/useAuth.js";
+import { NavLink, Link } from 'react-router-dom';
+import { Sparkles, User, UserCheck, Home, Info } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { useAuthModal } from '../hooks/useAuthModal';
 
 export function Header({ setIsAiModalOpen, onOpenAccount }) {
     const { user } = useAuth();
@@ -9,39 +10,70 @@ export function Header({ setIsAiModalOpen, onOpenAccount }) {
 
     const handleAiConsoleClick = () => {
         if (!user) {
-            // Intercept unauthenticated click and trigger auth modal
             openAuthModal('login');
             return;
         }
-        // Open AI Console for authenticated users
         setIsAiModalOpen(true);
     };
 
     const handleAccountClick = () => {
         if (user) {
-            // User is logged in -> Open Account Drawer
             onOpenAccount();
         } else {
-            // Guest user -> Open Auth Modal
             openAuthModal('login');
         }
     };
 
     return (
         <header className="w-full bg-slate-950 border-b border-slate-800 px-6 py-3 flex items-center justify-between">
-            {/* Left Side: App Brand / Logo */}
-            <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold">
-                    P
-                </div>
-                <h1 className="text-sm font-bold text-slate-100 uppercase tracking-wider">
-                    Pulse
-                </h1>
+            {/* Left Side: Brand Logo & Navigation Links */}
+            <div className="flex items-center space-x-8">
+                {/* Brand Logo / Home Trigger */}
+                <Link to="/" className="flex items-center space-x-3 group">
+                    <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold group-hover:border-cyan-400 group-hover:bg-cyan-500/20 transition-all">
+                        P
+                    </div>
+                    <span className="text-sm font-bold text-slate-100 uppercase tracking-wider group-hover:text-cyan-300 transition-colors">
+                        Pulse
+                    </span>
+                </Link>
+
+                {/* Navigation Links */}
+                <nav className="flex items-center space-x-1 sm:space-x-2">
+                    <NavLink
+                        to="/"
+                        end
+                        className={({ isActive }) =>
+                            `flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                isActive
+                                    ? 'bg-cyan-950/60 text-cyan-400 border border-cyan-800/60'
+                                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                            }`
+                        }
+                    >
+                        <Home className="w-3.5 h-3.5" />
+                        <span>Home</span>
+                    </NavLink>
+
+                    <NavLink
+                        to="/about"
+                        className={({ isActive }) =>
+                            `flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                isActive
+                                    ? 'bg-cyan-950/60 text-cyan-400 border border-cyan-800/60'
+                                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                            }`
+                        }
+                    >
+                        <Info className="w-3.5 h-3.5" />
+                        <span>About</span>
+                    </NavLink>
+                </nav>
             </div>
 
-            {/* Right Side: Button Group */}
+            {/* Right Side: Action Buttons */}
             <div className="flex items-center space-x-3 ml-auto">
-                {/* Protected AI Console Trigger */}
+                {/* Protected AI Search Trigger */}
                 <button
                     onClick={handleAiConsoleClick}
                     className="flex items-center space-x-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-lg shadow-cyan-900/20 transition-all border border-cyan-400/30"
@@ -50,7 +82,7 @@ export function Header({ setIsAiModalOpen, onOpenAccount }) {
                     <span>AI Search</span>
                 </button>
 
-                {/* Dynamic Auth / Account Button */}
+                {/* Account / Sign In Trigger */}
                 {user ? (
                     <button
                         onClick={handleAccountClick}

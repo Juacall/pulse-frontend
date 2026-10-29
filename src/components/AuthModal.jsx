@@ -15,6 +15,7 @@ export function AuthModal({ isOpen, mode, setMode, onClose }) {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [turnstileToken, setTurnstileToken] = useState(null);
     const turnstileRef = useRef(null);
+    const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
 
     // Reset internal state and Turnstile widget when modal opens, closes, or switches modes
     const handleSwitchMode = (newMode) => {
@@ -51,7 +52,7 @@ export function AuthModal({ isOpen, mode, setMode, onClose }) {
 
         setLoading(true);
         setErrorMessage('');
-        const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
+
 
         try {
             // 2. Validate Turnstile token with FastAPI backend
@@ -129,7 +130,7 @@ export function AuthModal({ isOpen, mode, setMode, onClose }) {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: `${window.location.origin}/auth/callback?verify=${verifyIdentity}`,
+                redirectTo: `${baseUrl}/auth/callback?verify=${verifyIdentity}`,
             },
         });
 

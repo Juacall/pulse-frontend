@@ -6,7 +6,7 @@ import { PoliticianCard } from "../components/PoliticianCard.jsx";
 const makePolitician = (overrides = {}) => ({
   id: "A000001",
   name: "Jane Doe",
-  party: "Democrat",
+  party: "Democratic",
   state: "CA",
   stateName: "California",
   chamber: "House",

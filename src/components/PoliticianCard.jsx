@@ -47,7 +47,7 @@ export function PoliticianCard({ politician: p, onSelect }) {
           {/* Header: Candidate image, name, and location */}
           <div className="flex items-center space-x-3 mb-3">
             <img
-                src={getMemberImageUrl(p.id, "225x275")}
+                src={p.imageUrl ? p.imageUrl : getMemberImageUrl(p.id, "225x275")}
                 alt={p.name}
                 onError={(e) => {
                   e.currentTarget.onerror = null;
