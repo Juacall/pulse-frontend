@@ -1,7 +1,6 @@
 import React from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { Sparkles, User, UserCheck, Home, Info } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
+import { Sparkles, User, UserCheck, Home, Info, Heart } from 'lucide-react';import { useAuth } from '../hooks/useAuth';
 import { useAuthModal } from '../hooks/useAuthModal';
 
 export function Header({ setIsAiModalOpen, onOpenAccount }) {
@@ -69,10 +68,25 @@ export function Header({ setIsAiModalOpen, onOpenAccount }) {
                         <span>About</span>
                     </NavLink>
                 </nav>
+
             </div>
 
             {/* Right Side: Action Buttons */}
             <div className="flex items-center space-x-3 ml-auto">
+
+
+                {/* Styled PayPal Donate Form Button */}
+                <form action="https://www.paypal.com/donate" method="post" target="_blank" className="inline-flex">
+                    <input type="hidden" name="hosted_button_id" value="V2UVGX8WXNUBA" />
+                    <button
+                        type="submit"
+                        className="flex items-center space-x-1.5 bg-emerald-950/60 hover:bg-emerald-900/50 text-emerald-400 hover:text-emerald-300 border border-emerald-800/60 text-xs font-semibold px-3 py-2 rounded-xl transition-all"
+                    >
+                        <Heart className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Donate</span>
+                    </button>
+                </form>
+
                 {/* Protected AI Search Trigger */}
                 <button
                     onClick={handleAiConsoleClick}
