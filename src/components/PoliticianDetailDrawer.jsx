@@ -37,7 +37,7 @@ export function PoliticianDetailDrawer({
                     {/* Header Area: pr-12 sm:pr-14 ensures content never collides with the close button on mobile */}
                     <div className="flex items-start space-x-4 mb-6 pt-2 pr-12 sm:pr-14 min-w-0">
                         <img
-                            src={getMemberImageUrl(selectedPolitician.id, "225x275")}
+                            src={selectedPolitician.imageUrl ? selectedPolitician.imageUrl : getMemberImageUrl(selectedPolitician.id, "225x275")}
                             alt={selectedPolitician.name}
                             onError={(e) => {
                                 e.currentTarget.onerror = null;

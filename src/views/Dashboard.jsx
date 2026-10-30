@@ -25,6 +25,8 @@ export function DashboardView({ selectedState, setSelectedState, onSelectPolitic
         setSelectedStatus("ALL")
     };
 
+
+
     return (
         <>
             <HeroSection

@@ -24,6 +24,37 @@ export default function App() {
     const ai = useAiConsole();
     const { user, simulateVerifyIdentity } = useAuth();
 
+    // In PoliticianGrid.jsx or MainLayout.jsx
+    const handleSelectPolitician = async (politician) => {
+        // 1. Instantly open drawer with current cached object so UI responds immediately
+        console.log(1)
+        setSelectedPolitician(politician);
+
+        // 2. Fetch fresh stats in background and update selectedPolitician
+        try {
+            console.log(2)
+
+            const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
+            const res = await fetch(`${baseUrl}/api/votes/stats/${politician.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data?.sentimentStats) {
+                    console.log(data.sentimentStats)
+                    // Update parent candidate state with fresh backend numbers
+                    setSelectedPolitician((prev) =>
+                        prev?.id === politician.id
+                            ? { ...prev, sentimentStats: data.sentimentStats }
+                            : prev
+                    );
+                }
+                console.log(3)
+
+            }
+        } catch (err) {
+            console.warn("Failed to fetch fresh sentiment stats:", err);
+        }
+    };
+
     return (
         <ToastProvider>
             <BrowserRouter>
@@ -41,7 +72,7 @@ export default function App() {
                                     <DashboardView
                                         selectedState={selectedState}
                                         setSelectedState={setSelectedState}
-                                        onSelectPolitician={setSelectedPolitician}
+                                        onSelectPolitician={handleSelectPolitician}
                                     />
                                 }
                             />
@@ -52,7 +83,7 @@ export default function App() {
                                     <DashboardView
                                         selectedState={selectedState}
                                         setSelectedState={setSelectedState}
-                                        onSelectPolitician={setSelectedPolitician}
+                                        onSelectPolitician={handleSelectPolitician}
                                     />
                                 }
                             />

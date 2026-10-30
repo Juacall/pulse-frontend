@@ -125,16 +125,23 @@ export function AuthModal({ isOpen, mode, setMode, onClose }) {
     };
 
     // Handle Google OAuth Login/Registration
-    const handleGoogleLogin = async () => {
-        setErrorMessage('');
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: `${baseUrl}/auth/callback?verify=${verifyIdentity}`,
-            },
-        });
+    const handleGoogleSignIn = async () => {
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/`,
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent',
+                    },
+                },
+            });
 
-        if (error) setErrorMessage(error.message);
+            if (error) throw error;
+        } catch (err) {
+            console.error('Google Auth Error:', err.message);
+        }
     };
 
     // Render "Check Your Email" Confirmation View
@@ -205,7 +212,7 @@ export function AuthModal({ isOpen, mode, setMode, onClose }) {
                 {/* Google Auth Button */}
                 <button
                     type="button"
-                    onClick={handleGoogleLogin}
+                    onClick={handleGoogleSignIn}
                     className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-100 rounded-xl text-sm font-semibold transition-colors mb-4"
                 >
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
