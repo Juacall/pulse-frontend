@@ -3,7 +3,7 @@ export function normalizeParty(party) {
   const normalized = value.toLowerCase();
 
   if (["d", "democrat", "democratic", "democratic party"].includes(normalized)) {
-    return "Democrat";
+    return "Democratic";
   }
   if (["r", "republic", "republican", "republican party"].includes(normalized)) {
     return "Republican";
@@ -12,7 +12,7 @@ export function normalizeParty(party) {
 }
 
 export function partyBadgeClass(party) {
-  if (party === "Democrat") {
+  if (party === "Democratic") {
     return "bg-blue-950/80 text-blue-300 border border-blue-800/60";
   }
   if (party === "Republican") {

@@ -1,28 +1,48 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { MinusCircle, ThumbsDown, ThumbsUp, Vote, LogIn, ShieldAlert } from 'lucide-react';
 import { useAuthModal } from "../hooks/useAuthModal.js";
 import { supabase } from "../lib/supabase.js";
 import { useToast } from "../hooks/useToast.js";
+import {useAuth} from "../hooks/useAuth.js";
 
 export function VoteComponent({
                                   politicianId,
                                   user,
                                   selectedPolitician,
-                                  initialUserVote = null,
                                   onVerifyIdentity,
-                                  onStatsLoaded,
                                   onVote,
                               }) {
     const [loading, setLoading] = useState(false);
-    const [userVote, setUserVote] = useState(initialUserVote);
+
+    // Global user vote map from AuthContext
+    const { userVotesMap, updateUserVoteInMap } = useAuth();
+
+    // Local state for in-flight optimistic overrides and server responses
+    const [optimisticStance, setOptimisticStance] = useState(null);
+    const [serverStats, setServerStats] = useState(null);
+    const [prevPoliticianId, setPrevPoliticianId] = useState(null);
+
     const { openAuthModal } = useAuthModal();
     const { showToast } = useToast();
 
     const activePoliticianId = politicianId || selectedPolitician?.id;
 
-    const [stats, setStats] = useState(() => {
-        return { approve: 0, neutral: 0, disapprove: 0 };
-    });
+    // Direct render-phase state reset when switching politicians (No useEffect needed)
+    if (activePoliticianId !== prevPoliticianId) {
+        setPrevPoliticianId(activePoliticianId);
+        setOptimisticStance(null);
+        setServerStats(null);
+    }
+
+    // Direct persistent stance resolution from AuthContext
+    const persistentStance = useMemo(() => {
+        if (!activePoliticianId || !userVotesMap) return null;
+        const val = userVotesMap[activePoliticianId];
+        return val ? String(val).toLowerCase() : null;
+    }, [activePoliticianId, userVotesMap]);
+
+    // Active UI stance: In-flight optimistic click > Persistent AuthContext stance
+    const activeStance = optimisticStance ? optimisticStance.toLowerCase() : persistentStance;
 
     const notify = (msg, type = 'success') => {
         if (showToast) {
@@ -32,42 +52,47 @@ export function VoteComponent({
         }
     };
 
-    // 1. Fetch initial vote counts from backend on mount
-    useEffect(() => {
-        if ( !activePoliticianId) return;
+    // 1. Base stats derived during render
+    const baseStats = useMemo(() => {
+        const raw = serverStats || selectedPolitician?.sentimentStats;
+        const approve = Number(raw?.approve) || 0;
+        const neutral = Number(raw?.neutral) || 0;
+        const disapprove = Number(raw?.disapprove) || 0;
+        const totalVotes = Number(raw?.totalVotes) || (approve + neutral + disapprove);
 
-        let isSubscribed = true;
-        const fetchVoteStats = async () => {
-            const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
-            try {
-                const statsUrl = new URL(`/api/votes/stats/${activePoliticianId}`, baseUrl);
-                const res = await fetch(statsUrl);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (isSubscribed && data?.sentimentStats) {
-                        setStats({
-                            approve: data.sentimentStats.approve || 0,
-                            neutral: data.sentimentStats.neutral || 0,
-                            disapprove: data.sentimentStats.disapprove || 0,
-                        });
-                        onStatsLoaded?.(activePoliticianId, data.sentimentStats);
-                    }
-                }
-            } catch (err) {
-                console.warn("Could not fetch vote statistics:", err);
+        return { approve, neutral, disapprove, totalVotes };
+    }, [serverStats, selectedPolitician?.sentimentStats]);
+
+    // 2. Pure sentiment math derived during render
+    const stats = useMemo(() => {
+        if (!optimisticStance || optimisticStance.toLowerCase() === persistentStance) {
+            return baseStats;
+        }
+
+        const updated = { ...baseStats };
+        const targetStance = optimisticStance.toLowerCase();
+
+        // EXISTING VOTE SWAP: Subtract 1 from old stance, add 1 to new stance
+        if (persistentStance) {
+            if (updated[persistentStance] > 0) {
+                updated[persistentStance] -= 1;
             }
-        };
+            updated[targetStance] = (updated[targetStance] || 0) + 1;
+        }
+        // BRAND NEW VOTE: Add 1 to new stance, increment totalVotes
+        else {
+            updated[targetStance] = (updated[targetStance] || 0) + 1;
+            updated.totalVotes = (updated.totalVotes || 0) + 1;
+        }
 
-        fetchVoteStats();
-        return () => { isSubscribed = false; };
-    }, [activePoliticianId]);
+        return updated;
+    }, [baseStats, optimisticStance, persistentStance]);
 
-    // 2. Compute dynamic bar percentages
-    const totalVotes = stats.approve + stats.neutral + stats.disapprove;
-
-    const approvePct = totalVotes > 0 ? (stats.approve / totalVotes) * 100 : 0;
-    const neutralPct = totalVotes > 0 ? (stats.neutral / totalVotes) * 100 : 100;
-    const disapprovePct = totalVotes > 0 ? (stats.disapprove / totalVotes) * 100 : 0;
+    // Visual bar percentages
+    const total = stats.totalVotes > 0 ? stats.totalVotes : (stats.approve + stats.neutral + stats.disapprove);
+    const approvePct = total > 0 ? (stats.approve / total) * 100 : 0;
+    const neutralPct = total > 0 ? (stats.neutral / total) * 100 : 100;
+    const disapprovePct = total > 0 ? (stats.disapprove / total) * 100 : 0;
 
     const handleVerifyIdentity = async () => {
         if (onVerifyIdentity) {
@@ -109,29 +134,9 @@ export function VoteComponent({
         }
     };
 
-    // Immediate local adjustment (no vote count inflation)
-    const applyOptimisticVote = (newStance) => {
-        setStats((prev) => {
-            const updated = { ...prev };
-
-            // If switching stances, subtract from previous choice
-            if (userVote && userVote !== newStance && updated[userVote] > 0) {
-                updated[userVote] -= 1;
-            }
-
-            // Increment new choice
-            if (userVote !== newStance) {
-                updated[newStance] = (updated[newStance] || 0) + 1;
-            }
-
-            return updated;
-        });
-
-        setUserVote(newStance);
-    };
-
     const handleVote = async (newStance) => {
-        if (userVote === newStance) return;
+        const targetStance = newStance.toLowerCase();
+        if (activeStance === targetStance) return;
 
         if (!user) {
             notify("Please sign in to participate in voting.", "error");
@@ -159,11 +164,8 @@ export function VoteComponent({
             return;
         }
 
-        const previousStance = userVote;
-        const previousStats = { ...stats };
-
-        // 3. Immediate local feedback
-        applyOptimisticVote(newStance);
+        // Apply instant optimistic UI update
+        setOptimisticStance(targetStance);
         setLoading(true);
 
         try {
@@ -176,31 +178,35 @@ export function VoteComponent({
                 },
                 body: JSON.stringify({
                     politician_id: activePoliticianId,
-                    vote_type: newStance,
+                    vote_type: targetStance,
                 })
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                // 4. Synchronize with exact server-returned totals
+                const verifiedStance = (data.user_vote || targetStance).toLowerCase();
+
+                // 1. Commit stance to global AuthContext
+                updateUserVoteInMap(activePoliticianId, verifiedStance);
+
+                // 2. Commit fresh backend stats directly in the event handler
                 if (data.sentimentStats) {
-                    setStats(data.sentimentStats);
+                    setServerStats(data.sentimentStats);
                 }
-                if (data.user_vote) {
-                    setUserVote(data.user_vote);
-                }
-                notify(`Vote for ${newStance.toUpperCase()} recorded!`, 'success');
-                // 👈 Pass the exact server-returned stats to update parent cards & drawer
-                onVote?.(activePoliticianId, data.sentimentStats);
+
+                // 3. Clear temporary override
+                setOptimisticStance(null);
+                notify(`Vote for ${verifiedStance.toUpperCase()} recorded!`, 'success');
+
+                // 4. Update parent candidate list state
+                onVote?.(activePoliticianId, data.sentimentStats || stats);
             } else {
                 throw new Error(data.detail || 'Server rejected vote');
             }
         } catch (e) {
             console.error("Voting submission error:", e);
-            // Rollback on failure
-            setUserVote(previousStance);
-            setStats(previousStats);
+            setOptimisticStance(null);
             notify(e.message || "Unable to reach voting server.", "error");
         } finally {
             setLoading(false);
@@ -215,21 +221,21 @@ export function VoteComponent({
                     <span>Public Opinion & Verified Sentiment</span>
                 </h3>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-400">
-                    {totalVotes} {totalVotes === 1 ? 'Vote' : 'Votes'}
+                    {total} {total === 1 ? 'Vote' : 'Votes'}
                 </span>
             </div>
 
-            {/* Substrate Sentiment Visualizer Bar */}
+            {/* Sentiment Visualizer Bar */}
             <div className="mb-4">
                 <div className="flex justify-between text-xs font-semibold mb-1.5">
                     <span className="text-emerald-400">
-                        Approve {totalVotes > 0 ? `(${approvePct.toFixed(0)}%)` : ''}
+                        Approve {total > 0 ? `(${approvePct.toFixed(0)}%)` : ''}
                     </span>
                     <span className="text-slate-400">
-                        Neutral {totalVotes > 0 ? `(${neutralPct.toFixed(0)}%)` : '(100%)'}
+                        Neutral {total > 0 ? `(${neutralPct.toFixed(0)}%)` : '(100%)'}
                     </span>
                     <span className="text-rose-400">
-                        Disapprove {totalVotes > 0 ? `(${disapprovePct.toFixed(0)}%)` : ''}
+                        Disapprove {total > 0 ? `(${disapprovePct.toFixed(0)}%)` : ''}
                     </span>
                 </div>
 
@@ -252,13 +258,13 @@ export function VoteComponent({
                 </div>
             </div>
 
-            {/* Voting Action Buttons */}
+            {/* Action Buttons */}
             <div className="flex items-center space-x-2 mb-2">
                 <button
                     disabled={loading}
                     onClick={() => handleVote('approve')}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center space-x-1.5 transition-all disabled:opacity-50 ${
-                        userVote === 'approve'
+                        activeStance === 'approve'
                             ? 'bg-emerald-600 text-white ring-2 ring-emerald-400 shadow-lg shadow-emerald-950/50'
                             : 'bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-800/80 text-emerald-300'
                     }`}
@@ -270,7 +276,7 @@ export function VoteComponent({
                     disabled={loading}
                     onClick={() => handleVote('neutral')}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center space-x-1.5 transition-all disabled:opacity-50 ${
-                        userVote === 'neutral'
+                        activeStance === 'neutral'
                             ? 'bg-slate-600 text-white ring-2 ring-slate-400 shadow-lg shadow-slate-950/50'
                             : 'bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300'
                     }`}
@@ -282,7 +288,7 @@ export function VoteComponent({
                     disabled={loading}
                     onClick={() => handleVote('disapprove')}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center space-x-1.5 transition-all disabled:opacity-50 ${
-                        userVote === 'disapprove'
+                        activeStance === 'disapprove'
                             ? 'bg-rose-600 text-white ring-2 ring-rose-400 shadow-lg shadow-rose-950/50'
                             : 'bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800/80 text-rose-300'
                     }`}
