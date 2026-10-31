@@ -1,55 +1,38 @@
-import React, {useEffect, useState} from 'react';
+// src/components/AccountDrawer.jsx
+import React, { useEffect, useState } from 'react';
 import { X, User, Mail, ShieldCheck, ShieldAlert, LogOut, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 export function AccountDrawer({ isOpen, onClose }) {
-    const { user, supabase, simulateVerifyIdentity } = useAuth();
+    const { user, supabase, verifyIdentity, refreshUserSummary } = useAuth();
     const [verifying, setVerifying] = useState(false);
 
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('verification') === 'success') {
-            // Clear URL parameter so it doesn't trigger continuously
+        if (urlParams.get('verification') === 'complete' || urlParams.get('verification') === 'success') {
+            // Clear URL parameter so it doesn't re-trigger on fresh renders
             window.history.replaceState({}, document.title, window.location.pathname);
 
-            // Refresh Supabase auth session to pull updated user_metadata / profiles table
-            supabase.auth.refreshSession();
+            // Trigger backend sync to update profile state across the app
+            if (refreshUserSummary) {
+                refreshUserSummary();
+            }
         }
-    }, []);
-
+    }, [refreshUserSummary]);
 
     if (!isOpen || !user) return null;
 
     const metadata = user.user_metadata || {};
     const fullName = metadata.full_name || 'Constituent User';
-    const isVerified = Boolean(metadata.is_identity_verified);
 
-    // Trigger Stripe Identity verification or dev simulation
+    // Read identity verification status from top-level user or user_metadata fallback
+    const isVerified = Boolean(user.is_identity_verified ?? metadata.is_identity_verified);
+
+    // Single unified handler delegating to AuthProvider's environment-aware function
     const handleStartVerification = async () => {
         setVerifying(true);
         try {
-            // Check if we are in dev/simulation mode
-            if (import.meta.env.VITE_APP_ENV == "mock" && simulateVerifyIdentity) {
-                simulateVerifyIdentity();
-                setVerifying(false);
-                return;
-            }
-
-
-            // Production Stripe Identity Session flow
-            const session = (await supabase.auth.getSession())?.data?.session;
-            const res = await fetch('/api/identity/create-session', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${session?.access_token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            const data = await res.json();
-            if (data?.url) {
-                window.location.href = data.url;
-            }
+            await verifyIdentity();
         } catch (err) {
             console.error('Failed to initiate verification:', err);
         } finally {
@@ -62,12 +45,9 @@ export function AccountDrawer({ isOpen, onClose }) {
         onClose();
     };
 
-
     return (
         <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/60 backdrop-blur-sm flex justify-end">
-            <div
-                className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out"
-            >
+            <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out">
                 {/* Drawer Header */}
                 <div>
                     <div className="flex items-center justify-between pb-6 border-b border-slate-800">
@@ -136,7 +116,7 @@ export function AccountDrawer({ isOpen, onClose }) {
                             <p className="text-xs text-slate-300 leading-relaxed">
                                 {isVerified
                                     ? 'Your constituent identity has been confirmed via Stripe Identity. You can participate in legislative voting.'
-                                    : 'Verify your state locality to unlock constituent voting privileges on representative profiles.'}
+                                    : 'Verify your constituent identity to unlock voting privileges on representative profiles.'}
                             </p>
 
                             {!isVerified && (

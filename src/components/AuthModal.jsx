@@ -230,43 +230,6 @@ export function AuthModal({ isOpen, mode, setMode, onClose }) {
                     <span className="bg-slate-900 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">or</span>
                 </div>
 
-                {/* Identity Verification Toggle Option */}
-                {mode === 'register' && (
-                <div className="mb-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl p-3.5">
-                    <div className="flex items-start justify-between gap-2">
-                        <label className="flex items-center space-x-2 cursor-pointer select-none">
-                            <input
-                                type="checkbox"
-                                checked={verifyIdentity}
-                                onChange={(e) => setVerifyIdentity(e.target.checked)}
-                                className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-slate-900"
-                            />
-                            <span className="text-xs font-semibold text-slate-200">
-                                Verify constituent identity via Stripe
-                            </span>
-                        </label>
-
-                        <button
-                            type="button"
-                            onClick={() => setShowIdentityExcerpt(!showIdentityExcerpt)}
-                            className="text-slate-400 hover:text-cyan-400 text-xs flex items-center gap-0.5"
-                        >
-                            <Info className="w-3.5 h-3.5" />
-                            {showIdentityExcerpt ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                        </button>
-                    </div>
-
-                    {/* Inline Excerpt */}
-                    {showIdentityExcerpt && (
-                        <div className="mt-2.5 pt-2 border-t border-slate-800/60 text-[11px] text-slate-400 leading-relaxed">
-                            <p>
-                                Verification establishes your legislative district and state locality without storing raw ID photos. Unlocks voting privileges on candidate profiles and legislative proposals.
-                            </p>
-                        </div>
-                    )}
-                </div>
-                )}
-
                 {/* Auth Form */}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {mode === 'register' && (

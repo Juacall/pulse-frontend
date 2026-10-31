@@ -1,23 +1,31 @@
+// src/components/VoteComponent.jsx
 import React, { useState, useMemo } from 'react';
 import { MinusCircle, ThumbsDown, ThumbsUp, Vote, LogIn, ShieldAlert } from 'lucide-react';
 import { useAuthModal } from "../hooks/useAuthModal.js";
 import { supabase } from "../lib/supabase.js";
 import { useToast } from "../hooks/useToast.js";
-import {useAuth} from "../hooks/useAuth.js";
+import { useAuth } from "../hooks/useAuth.js";
 
 export function VoteComponent({
                                   politicianId,
-                                  user,
+                                  user: propUser,
                                   selectedPolitician,
-                                  onVerifyIdentity,
                                   onVote,
                               }) {
     const [loading, setLoading] = useState(false);
 
-    // Global user vote map from AuthContext
-    const { userVotesMap, updateUserVoteInMap } = useAuth();
+    // Pull user, vote map, and verification handler directly from AuthContext
+    const {
+        user: contextUser,
+        userVotesMap,
+        updateUserVoteInMap,
+        verifyIdentity
+    } = useAuth();
 
-    // Local state for in-flight optimistic overrides and server responses
+    // Prefer context user state, fallback to prop if necessary
+    const user = contextUser || propUser;
+
+    // Local state for optimistic overrides and server stats
     const [optimisticStance, setOptimisticStance] = useState(null);
     const [serverStats, setServerStats] = useState(null);
     const [prevPoliticianId, setPrevPoliticianId] = useState(null);
@@ -27,14 +35,17 @@ export function VoteComponent({
 
     const activePoliticianId = politicianId || selectedPolitician?.id;
 
-    // Direct render-phase state reset when switching politicians (No useEffect needed)
+    // Direct render-phase state reset when switching politicians
     if (activePoliticianId !== prevPoliticianId) {
         setPrevPoliticianId(activePoliticianId);
         setOptimisticStance(null);
         setServerStats(null);
     }
 
-    // Direct persistent stance resolution from AuthContext
+    // Unified verification flag check
+    const isVerified = Boolean(user?.is_identity_verified ?? user?.user_metadata?.is_identity_verified);
+
+    // Persistent stance lookup from AuthContext votes map
     const persistentStance = useMemo(() => {
         if (!activePoliticianId || !userVotesMap) return null;
         const val = userVotesMap[activePoliticianId];
@@ -52,7 +63,7 @@ export function VoteComponent({
         }
     };
 
-    // 1. Base stats derived during render
+    // Base sentiment stats
     const baseStats = useMemo(() => {
         const raw = serverStats || selectedPolitician?.sentimentStats;
         const approve = Number(raw?.approve) || 0;
@@ -63,7 +74,7 @@ export function VoteComponent({
         return { approve, neutral, disapprove, totalVotes };
     }, [serverStats, selectedPolitician?.sentimentStats]);
 
-    // 2. Pure sentiment math derived during render
+    // Optimistic sentiment calculations
     const stats = useMemo(() => {
         if (!optimisticStance || optimisticStance.toLowerCase() === persistentStance) {
             return baseStats;
@@ -72,15 +83,12 @@ export function VoteComponent({
         const updated = { ...baseStats };
         const targetStance = optimisticStance.toLowerCase();
 
-        // EXISTING VOTE SWAP: Subtract 1 from old stance, add 1 to new stance
         if (persistentStance) {
             if (updated[persistentStance] > 0) {
                 updated[persistentStance] -= 1;
             }
             updated[targetStance] = (updated[targetStance] || 0) + 1;
-        }
-        // BRAND NEW VOTE: Add 1 to new stance, increment totalVotes
-        else {
+        } else {
             updated[targetStance] = (updated[targetStance] || 0) + 1;
             updated.totalVotes = (updated.totalVotes || 0) + 1;
         }
@@ -94,42 +102,16 @@ export function VoteComponent({
     const neutralPct = total > 0 ? (stats.neutral / total) * 100 : 100;
     const disapprovePct = total > 0 ? (stats.disapprove / total) * 100 : 0;
 
+    // Trigger context verification handler directly
     const handleVerifyIdentity = async () => {
-        if (onVerifyIdentity) {
-            onVerifyIdentity();
-            return;
-        }
-
-        const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
         try {
-            const sessionRes = await supabase.auth.getSession();
-            const accessToken = sessionRes?.data?.session?.access_token;
-
-            if (!accessToken) {
+            if (verifyIdentity) {
+                await verifyIdentity();
+            } else {
                 openAuthModal("login");
-                return;
-            }
-
-            const sessionUrl = new URL("/api/identity/create-session", baseUrl);
-            const response = await fetch(sessionUrl, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.detail || "Failed to create verification session");
-            }
-
-            const { url } = await response.json();
-            if (url) {
-                window.location.href = url;
             }
         } catch (err) {
-            console.error('Failed to initiate Stripe verification:', err);
+            console.error('Failed to initiate identity verification:', err);
             notify(`Verification error: ${err.message}`, 'error');
         }
     };
@@ -140,10 +122,11 @@ export function VoteComponent({
 
         if (!user) {
             notify("Please sign in to participate in voting.", "error");
+            openAuthModal("login");
             return;
         }
 
-        if (!user?.user_metadata?.is_identity_verified) {
+        if (!isVerified) {
             notify("Constituent identity verification required to cast a vote.", "error");
             return;
         }
@@ -190,7 +173,7 @@ export function VoteComponent({
                 // 1. Commit stance to global AuthContext
                 updateUserVoteInMap(activePoliticianId, verifiedStance);
 
-                // 2. Commit fresh backend stats directly in the event handler
+                // 2. Commit fresh backend stats
                 if (data.sentimentStats) {
                     setServerStats(data.sentimentStats);
                 }
@@ -199,7 +182,7 @@ export function VoteComponent({
                 setOptimisticStance(null);
                 notify(`Vote for ${verifiedStance.toUpperCase()} recorded!`, 'success');
 
-                // 4. Update parent candidate list state
+                // 4. Update parent list state
                 onVote?.(activePoliticianId, data.sentimentStats || stats);
             } else {
                 throw new Error(data.detail || 'Server rejected vote');
@@ -312,7 +295,7 @@ export function VoteComponent({
                         Sign In
                     </button>
                 </div>
-            ) : !user?.user_metadata?.is_identity_verified && (
+            ) : !isVerified && (
                 <div className="mt-3 p-2.5 rounded-xl bg-amber-950/40 border border-amber-800/50 flex items-center justify-between text-xs text-amber-200">
                     <span className="flex items-center gap-1.5">
                         <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
