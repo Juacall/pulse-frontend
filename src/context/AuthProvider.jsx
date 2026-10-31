@@ -11,7 +11,14 @@ export function AuthProvider({ children }) {
 
     // Fetch user summary (verification status, profile details, and votes map)
     const fetchUserSummary = useCallback(async (sessionUser, accessToken) => {
-        if (!accessToken) {
+        // Strictly require a valid access token string before attempting HTTP fetch
+        if (!accessToken || typeof accessToken !== 'string') {
+            setUserVotesMap({});
+            return;
+        }
+
+        // In local mock mode, bypass real backend network requests entirely
+        if (APP_ENV === 'mock') {
             setUserVotesMap({});
             return;
         }
