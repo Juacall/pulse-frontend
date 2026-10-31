@@ -31,7 +31,7 @@ export function PoliticianGrid({
             <StatusPanel
                 icon={RefreshCw}
                 iconClass="text-slate-500 animate-spin"
-                message="Loading congressional members…"
+                message="Loading Politicians…"
             />
         );
     } else if (hasError) {
@@ -39,7 +39,7 @@ export function PoliticianGrid({
             <StatusPanel
                 icon={AlertCircle}
                 iconClass="text-rose-400"
-                message="Could not load congressional members. Please try again."
+                message="Could not load politicians. Please try again."
             />
         );
     } else if (!isStateSelected && !hasActiveSearch && politicians.length === 0) {
@@ -84,7 +84,7 @@ export function PoliticianGrid({
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-slate-200 flex items-center space-x-2">
                     <User className="w-5 h-5 text-cyan-400" />
-                    <span>Congressional Members ({politicians.length})</span>
+                    <span>Politicians ({politicians.length})</span>
                 </h2>
             </div>
             {content}

@@ -206,6 +206,8 @@ export function usePoliticians({
       democrats: currentDataset.filter((m) => m.party === "Democratic").length,
       republicans: currentDataset.filter((m) => m.party === "Republican").length,
       totalBills: currentDataset.reduce((sum, m) => sum + (m.metrics?.sponsoredCount || 0), 0),
+      incumbents: currentDataset.filter((m) => m.isIncumbent).length,
+      challengers: currentDataset.filter((m) => !m.isIncumbent).length,
     };
   }, [selectedState, rawPoliticians, searchResults, isSearchActive]);
 
