@@ -61,9 +61,7 @@ export function PoliticianGrid({
     }, [selectedState, viewMode, isStateSelected]);
 
     // Calculate total candidate contenders across election slates for header label
-    const totalElectionCandidates = electionData?.races?.reduce(
-        (sum, race) => sum + (race.candidates?.length || 0), 0
-    ) || electionData?.candidates?.length || 0;
+    const totalElections = electionData?.races?.length || electionData?.total_races || 0;
 
     const toggleViewMode = () => {
         setViewMode((prev) => (prev === 'politicians' ? 'elections' : 'politicians'));
@@ -157,7 +155,7 @@ export function PoliticianGrid({
                     ) : (
                         <>
                             <Vote className="w-5 h-5 text-cyan-400" />
-                            <span>Elections ({isStateSelected ? totalElectionCandidates : 0})</span>
+                            <span>Elections ({isStateSelected ? totalElections : 0})</span>
                         </>
                     )}
                 </h2>
