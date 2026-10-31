@@ -41,7 +41,9 @@ export function PoliticianGrid({
 
             setIsLoadingElections(true);
             try {
-                const res = await fetch(`/api/elections/state?state_code=${selectedState}&cycle=2026`);
+                const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
+
+                const res = await fetch(`${baseUrl}/api/elections/state?state_code=${selectedState}&cycle=2026`);
                 const data = await res.json();
 
                 // Only update state if component is still active
