@@ -94,7 +94,6 @@ export default function App() {
                         selectedPolitician={selectedPolitician}
                         onClose={() => setSelectedPolitician(null)}
                         user={user}
-                        onVerifyIdentity={simulateVerifyIdentity}
                         onVote={handleVote}
                     />
 

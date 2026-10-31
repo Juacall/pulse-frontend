@@ -14,7 +14,6 @@ export function PoliticianDetailDrawer({
                                            selectedPolitician,
                                            onClose,
                                            user,
-                                           onVerifyIdentity,
                                            onVote,
                                            showToast
                                        }) {
@@ -80,7 +79,6 @@ export function PoliticianDetailDrawer({
                             politicianId={selectedPolitician.id}
                             selectedPolitician={selectedPolitician}
                             user={user}
-                            onVerifyIdentity={onVerifyIdentity}
                             onVote={onVote}
                             showToast={showToast}
                             onStatsLoaded={onVote}
