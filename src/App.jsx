@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Header } from "./components/Header.jsx";
 import { DashboardView } from "./views/Dashboard.jsx";
+import { AnalyticsPage } from "./pages/Analytics.jsx";
 import { About } from "./pages/About.jsx";
 import { AiConsoleModal } from "./components/AiConsoleModal.jsx";
 import { PoliticianDetailDrawer } from "./components/PoliticianDetailDrawer.jsx";
@@ -22,24 +23,24 @@ export default function App() {
     } = usePoliticians({ selectedState });
 
     const ai = useAiConsole();
-    const { user, simulateVerifyIdentity } = useAuth();
+    const { user} = useAuth();
 
     // In PoliticianGrid.jsx or MainLayout.jsx
     const handleSelectPolitician = async (politician) => {
         // 1. Instantly open drawer with current cached object so UI responds immediately
-        console.log(1)
+        console.log(1);
         setSelectedPolitician(politician);
 
         // 2. Fetch fresh stats in background and update selectedPolitician
         try {
-            console.log(2)
+            console.log(2);
 
             const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
             const res = await fetch(`${baseUrl}/api/votes/stats/${politician.id}`);
             if (res.ok) {
                 const data = await res.json();
                 if (data?.sentimentStats) {
-                    console.log(data.sentimentStats)
+                    console.log(data.sentimentStats);
                     // Update parent candidate state with fresh backend numbers
                     setSelectedPolitician((prev) =>
                         prev?.id === politician.id
@@ -47,8 +48,7 @@ export default function App() {
                             : prev
                     );
                 }
-                console.log(3)
-
+                console.log(3);
             }
         } catch (err) {
             console.warn("Failed to fetch fresh sentiment stats:", err);
@@ -76,6 +76,7 @@ export default function App() {
                                     />
                                 }
                             />
+                            <Route path="/analytics" element={<AnalyticsPage />} />
                             <Route path="/about" element={<About />} />
                             <Route
                                 path="*"
