@@ -30,7 +30,7 @@ export function PoliticianDetailDrawer({
 
     // Extract website & campaign URLs across camelCase and snake_case API payloads
     const websiteUrl = politician.website_url || politician.websiteUrl || politician.website;
-    const campaignUrl = politician.campaign_url || politician.campaignUrl;
+    const campaignUrl = politician.campaign_url || politician.campaign_url || politician.campaign;
 
     return (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex justify-end">
