@@ -53,12 +53,10 @@ export function PoliticianActionButtons({
                                             websiteUrl,  // Official .gov URL (can be string or ['https://...'])
                                             campaignUrl  // Official campaign URL
                                         }) {
-    console.log(websiteUrl)
-    console.log(campaignUrl)
+
     const officialGovUrl = formatUrl(websiteUrl);
     const officialCampaignUrl = formatUrl(campaignUrl)
-    console.log(officialGovUrl)
-    console.log(officialCampaignUrl)
+
 
     const trackClick = (buttonType, destinationUrl) => {
         const API_BASE_URL = import.meta.env.VITE_API_URL || '';
