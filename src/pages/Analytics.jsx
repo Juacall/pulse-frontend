@@ -27,6 +27,7 @@ export function AnalyticsPage() {
 
     // Global Initial Page Loading
     const [pageLoading, setPageLoading] = useState(true);
+    const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
     // 1. Initial Load for Page-Level Data (Runs Once On Mount)
     useEffect(() => {
@@ -34,9 +35,9 @@ export function AnalyticsPage() {
             try {
                 setPageLoading(true);
                 const [natRes, stateRes, incRes] = await Promise.all([
-                    fetch('/api/analytics/donations/national-summary').then(res => res.json()),
-                    fetch('/api/analytics/donations/by-state?limit=15').then(res => res.json()),
-                    fetch('/api/analytics/donations/incumbent-vs-challenger').then(res => res.json())
+                    fetch(`${API_BASE_URL}/api/analytics/donations/national-summary`).then(res => res.json()),
+                    fetch(`${API_BASE_URL}/api/analytics/donations/by-state?limit=15`).then(res => res.json()),
+                    fetch(`${API_BASE_URL}/api/analytics/donations/incumbent-vs-challenger`).then(res => res.json())
                 ]);
 
                 setNationalSummary(natRes);
