@@ -11,6 +11,7 @@ import { usePoliticians } from "./hooks/usePoliticians";
 import { useAiConsole } from "./hooks/useAiConsole";
 import { useAuth } from "./hooks/useAuth";
 import { ToastProvider } from "./context/ToastProvider.jsx";
+import {ResetPasswordPage} from "./pages/ResetPassword.jsx";
 
 export default function App() {
     const [selectedState, setSelectedState] = useState("ALL");
@@ -28,19 +29,16 @@ export default function App() {
     // In PoliticianGrid.jsx or MainLayout.jsx
     const handleSelectPolitician = async (politician) => {
         // 1. Instantly open drawer with current cached object so UI responds immediately
-        console.log(1);
         setSelectedPolitician(politician);
 
         // 2. Fetch fresh stats in background and update selectedPolitician
         try {
-            console.log(2);
 
             const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
             const res = await fetch(`${baseUrl}/api/votes/stats/${politician.id}`);
             if (res.ok) {
                 const data = await res.json();
                 if (data?.sentimentStats) {
-                    console.log(data.sentimentStats);
                     // Update parent candidate state with fresh backend numbers
                     setSelectedPolitician((prev) =>
                         prev?.id === politician.id
@@ -48,7 +46,6 @@ export default function App() {
                             : prev
                     );
                 }
-                console.log(3);
             }
         } catch (err) {
             console.warn("Failed to fetch fresh sentiment stats:", err);
@@ -77,6 +74,7 @@ export default function App() {
                                 }
                             />
                             <Route path="/analytics" element={<AnalyticsPage />} />
+                            <Route path="/reset-password" element={<ResetPasswordPage />} />
                             <Route path="/about" element={<About />} />
                             <Route
                                 path="*"

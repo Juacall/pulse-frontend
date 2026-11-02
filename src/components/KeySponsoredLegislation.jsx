@@ -21,7 +21,7 @@ function getBillDate(bill) {
   return bill.date ?? bill.introducedDate ?? bill.introduced_date ?? "Date unavailable";
 }
 
-export default function KeySponsoredLegislation({ bioguideId }) {
+export function KeySponsoredLegislation({ bioguideId }) {
   const [request, setRequest] = useState({ bioguideId: null, status: "loading", bills: [] });
   const isCurrentMember = request.bioguideId === bioguideId;
   const status = isCurrentMember ? request.status : "loading";

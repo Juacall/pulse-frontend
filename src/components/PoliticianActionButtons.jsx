@@ -20,17 +20,17 @@ export function PoliticianActionButtons({
     const officialCampaignUrl = formatUrl(campaignUrl);
 
     const trackClick = (buttonType, destinationUrl) => {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || '';
         const payload = JSON.stringify({
             bioguide_id: memberId,
             button_type: buttonType,
             destination_url: destinationUrl,
         });
-        console.log(payload)
         if (navigator.sendBeacon) {
             const blob = new Blob([payload], { type: 'application/json' });
-            navigator.sendBeacon('/api/telemetry/click', blob);
+            navigator.sendBeacon(`${API_BASE_URL}/api/telemetry/click`, blob);
         } else {
-            fetch('/api/telemetry/click', {
+            fetch(`${API_BASE_URL}/api/telemetry/click`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: payload,

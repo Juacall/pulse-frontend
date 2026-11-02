@@ -205,6 +205,7 @@ export function usePoliticians({
       totalMembers: currentDataset.length,
       democrats: currentDataset.filter((m) => m.party === "Democratic").length,
       republicans: currentDataset.filter((m) => m.party === "Republican").length,
+      independents: currentDataset.filter((m) => m.party === "Independent").length,
       totalBills: currentDataset.reduce((sum, m) => sum + (m.metrics?.sponsoredCount || 0), 0),
       incumbents: currentDataset.filter((m) => m.isIncumbent).length,
       challengers: currentDataset.filter((m) => !m.isIncumbent).length,
