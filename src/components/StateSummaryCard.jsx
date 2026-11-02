@@ -3,9 +3,14 @@ import React from 'react';
 import { Map, UserCheck, Shield } from 'lucide-react';
 
 export function StateSummaryCard({ stats, onClear }) {
-  // Support both explicit props or fallback calculation from candidates array if provided in stats
+  // Support explicit props or fallback calculation from candidates array if provided in stats
   const incumbents = stats.incumbentsCount ?? stats.incumbents ?? 0;
   const challengers = stats.challengersCount ?? stats.challengers ?? 0;
+
+  // Extract party counts with fallbacks
+  const demCount = stats.democrats ?? stats.democratCount ?? 0;
+  const repCount = stats.republicans ?? stats.republicanCount ?? 0;
+  const indCount = stats.independents ?? stats.independentCount ?? 0;
 
   return (
       <div className="mt-6 bg-slate-900 border border-cyan-500/30 rounded-2xl p-4 shadow-xl animate-in fade-in duration-300">
@@ -42,13 +47,21 @@ export function StateSummaryCard({ stats, onClear }) {
             <span className="font-bold text-indigo-400 text-sm mt-0.5">{challengers}</span>
           </div>
 
-          {/* Parties Box */}
+          {/* Parties Box (Updated to include Independents) */}
           <div className="bg-slate-950 p-2 rounded-xl border border-slate-800 flex flex-col justify-center items-center">
           <span className="text-[10px] text-slate-500 block uppercase font-bold tracking-wider">
             Parties
           </span>
-            <span className="font-bold text-slate-200 mt-0.5">
-            <span className="text-blue-400">{stats.democrats || 0}D</span> / <span className="text-red-400">{stats.republicans || 0}R</span>
+            <span className="font-bold text-slate-200 mt-0.5 text-[11px]">
+            <span className="text-blue-400">{demCount}D</span>
+              {' / '}
+              <span className="text-red-400">{repCount}R</span>
+              {indCount > 0 && (
+                  <>
+                    {' / '}
+                    <span className="text-purple-400">{indCount}I</span>
+                  </>
+              )}
           </span>
           </div>
 

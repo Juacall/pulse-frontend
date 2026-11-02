@@ -18,7 +18,7 @@ function formatContributionAmount(amount) {
   }).format(amount);
 }
 
-export default function CampaignContributionSummary({ politicianId }) {
+export function CampaignContributionSummary({ politicianId }) {
   const [campaignData, setCampaignData] = useState({
     politicianId: null,
     ...loadingState
