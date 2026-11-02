@@ -58,7 +58,7 @@ export function AnalyticsPage() {
         async function fetchStateIncumbentData() {
             try {
                 setStateIncumbentLoading(true);
-                const res = await fetch(`/api/analytics/donations/by-state/${selectedState}/incumbent-vs-challenger`);
+                const res = await fetch(`${API_BASE_URL}/api/analytics/donations/by-state/${selectedState}/incumbent-vs-challenger`);
                 if (res.ok) {
                     const data = await res.json();
                     setStateIncumbentData(data);
