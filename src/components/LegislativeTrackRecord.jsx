@@ -12,9 +12,11 @@ export function LegislativeTrackRecordTab({ politicianId }) {
         let isMounted = true;
         async function fetchTrackRecord() {
             try {
+                const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
+
                 setLoading(true);
                 setError(null);
-                const res = await fetch(`/api/analytics/legislative/track-record/${politicianId}`);
+                const res = await fetch(`${baseUrl}/api/analytics/legislative/track-record/${politicianId}`);
                 if (!res.ok) {
                     throw new Error(`Failed to fetch legislative track record (${res.status})`);
                 }
