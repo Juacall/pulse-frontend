@@ -19,7 +19,7 @@ export function PoliticianDetailDrawer({
                                        }) {
     const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'legislative' | 'finance'
 
-    // Support either prop name passed by parent
+    // Support either prop name passed by parent components
     const politician = selectedPolitician || politicianProp;
     const isOpen = Boolean(politician);
 
@@ -28,13 +28,17 @@ export function PoliticianDetailDrawer({
     const bioguideId = politician.bioguide_id || politician.id;
     const isIncumbent = politician.is_incumbent ?? (String(politician.status).toLowerCase() === 'incumbent');
 
+    // Extract website & campaign URLs across camelCase and snake_case API payloads
+    const websiteUrl = politician.website_url || politician.websiteUrl || politician.website;
+    const campaignUrl = politician.campaign_url || politician.campaign_url || politician.campaign;
+
     return (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex justify-end">
             <div className="w-full max-w-2xl bg-slate-900 border-l border-slate-800 h-full shadow-2xl flex flex-col justify-between overflow-hidden">
 
                 {/* 1. Header & Candidate Info */}
-                <div className="p-6 border-b border-slate-800 bg-slate-950/60">
-                    <div className="flex items-center justify-between mb-4">
+                <div className="p-6 border-b border-slate-800 bg-slate-950/60 space-y-4">
+                    <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                             <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-200 font-bold overflow-hidden">
                                 {politician.image_url || politician.imageUrl ? (
@@ -67,11 +71,11 @@ export function PoliticianDetailDrawer({
                         </button>
                     </div>
 
-                    {/* Action Buttons (.gov & Support Campaign) */}
+                    {/* Telemetry-tracked Action Buttons (.gov Website & Campaign Support Links) */}
                     <PoliticianActionButtons
                         memberId={bioguideId}
-                        websiteUrl={politician.website_url || politician.websiteUrl}
-                        campaignUrl={politician.campaign_url || politician.campaignUrl}
+                        websiteUrl={websiteUrl}
+                        campaignUrl={campaignUrl}
                     />
                 </div>
 
@@ -122,7 +126,6 @@ export function PoliticianDetailDrawer({
                         <>
                             <MemberOverviewStats politician={politician} />
 
-                            {/* Integrated Public Sentiment & Verified Voting Component */}
                             <VoteComponent
                                 politicianId={bioguideId}
                                 selectedPolitician={politician}

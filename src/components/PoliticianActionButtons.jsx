@@ -1,23 +1,64 @@
+// src/components/PoliticianActionButtons.jsx
 import React from 'react';
 
+// src/components/PoliticianActionButtons.jsx
+
+const formatUrl = (rawUrl) => {
+    if (!rawUrl) return null;
+
+    // 1. Unwrap real JS arrays if passed directly
+    let target = Array.isArray(rawUrl) ? rawUrl[0] : rawUrl;
+
+    if (!target) return null;
+
+    // 2. Strip stringified array brackets [ ], quotes ' ", and extra whitespace
+    let clean = String(target)
+        .trim()
+        .replace(/^\[|\]$/g, '')   // Strip leading/trailing array brackets [ and ]
+        .replace(/^["']|["']$/g, '') // Strip leading/trailing quotes
+        .replace(/^\[|\]$/g, '')   // Handle nested stringified brackets
+        .trim();
+
+    if (
+        !clean ||
+        clean === '#' ||
+        clean.toLowerCase() === 'null' ||
+        clean.toLowerCase() === 'undefined' ||
+        clean.toLowerCase().startsWith('about:blank')
+    ) {
+        return null;
+    }
+
+    // 3. Ensure leading protocol (only if not already present)
+    if (!/^https?:\/\//i.test(clean)) {
+        clean = `https://${clean}`;
+    }
+
+    // 4. Validate & parse using native URL constructor
+    try {
+        const parsed = new URL(clean);
+        if (!parsed.hostname || !parsed.hostname.includes('.')) {
+            return null;
+        }
+        return parsed.href;
+    } catch {
+        if (clean.startsWith('https://') || clean.startsWith('http://')) {
+            return clean;
+        }
+        return null;
+    }
+};
 export function PoliticianActionButtons({
                                             memberId,
-                                            websiteUrl,  // Official .gov URL
-                                            campaignUrl  // Official campaign URL from OpenFEC
+                                            websiteUrl,  // Official .gov URL (can be string or ['https://...'])
+                                            campaignUrl  // Official campaign URL
                                         }) {
-    // Cleans URL and returns null if string is empty, null, or undefined
-    const formatUrl = (url) => {
-        if (!url || typeof url !== 'string') return null;
-        const clean = url.trim();
-        if (!clean) return null;
-
-        return clean.toLowerCase().startsWith('http://') || clean.toLowerCase().startsWith('https://')
-            ? clean
-            : `https://${clean}`;
-    };
-
+    console.log(websiteUrl)
+    console.log(campaignUrl)
     const officialGovUrl = formatUrl(websiteUrl);
-    const officialCampaignUrl = formatUrl(campaignUrl);
+    const officialCampaignUrl = formatUrl(campaignUrl)
+    console.log(officialGovUrl)
+    console.log(officialCampaignUrl)
 
     const trackClick = (buttonType, destinationUrl) => {
         const API_BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -26,6 +67,7 @@ export function PoliticianActionButtons({
             button_type: buttonType,
             destination_url: destinationUrl,
         });
+
         if (navigator.sendBeacon) {
             const blob = new Blob([payload], { type: 'application/json' });
             navigator.sendBeacon(`${API_BASE_URL}/api/telemetry/click`, blob);
@@ -39,14 +81,13 @@ export function PoliticianActionButtons({
         }
     };
 
-    // Entire component renders nothing if neither URL exists
     if (!officialGovUrl && !officialCampaignUrl) {
         return null;
     }
 
     return (
         <div className="flex flex-wrap items-center gap-3">
-            {/* 1. Official .gov Button - Hidden if websiteUrl is missing/null */}
+            {/* Official .gov Button */}
             {officialGovUrl && (
                 <a
                     href={officialGovUrl}
@@ -57,12 +98,12 @@ export function PoliticianActionButtons({
                 >
                     <span>Official Site (.gov)</span>
                     <svg className="w-3.5 h-3.5 ml-1.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
                 </a>
             )}
 
-            {/* 2. Support Campaign Button - Hidden if campaignUrl is missing/null */}
+            {/* Support Campaign Button */}
             {officialCampaignUrl && (
                 <a
                     href={officialCampaignUrl}
@@ -73,7 +114,7 @@ export function PoliticianActionButtons({
                 >
                     <span>Support Campaign</span>
                     <svg className="w-4 h-4 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
                 </a>
             )}
