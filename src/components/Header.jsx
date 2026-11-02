@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { Home, Info, Heart, Sparkles, UserCheck, User } from 'lucide-react';
-import {useAuth} from "../hooks/useAuth.js";
-import {useAuthModal} from "../hooks/useAuthModal.js";
+import { Home, Info, Heart, Sparkles, UserCheck, User, BarChart3 } from 'lucide-react';
+import { useAuth } from "../hooks/useAuth.js";
+import { useAuthModal } from "../hooks/useAuthModal.js";
 
 export function Header({ setIsAiModalOpen, onOpenAccount }) {
     const { user } = useAuth();
@@ -53,6 +53,21 @@ export function Header({ setIsAiModalOpen, onOpenAccount }) {
                     >
                         <Home className="w-3.5 h-3.5 shrink-0" />
                         <span className="hidden sm:inline">Home</span>
+                    </NavLink>
+
+                    {/* Analytics Page Trigger */}
+                    <NavLink
+                        to="/analytics"
+                        className={({ isActive }) =>
+                            `flex items-center space-x-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                isActive
+                                    ? 'bg-cyan-950/60 text-cyan-400 border border-cyan-800/60'
+                                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                            }`
+                        }
+                    >
+                        <BarChart3 className="w-3.5 h-3.5 shrink-0" />
+                        <span className="hidden sm:inline">Analytics</span>
                     </NavLink>
 
                     <NavLink
