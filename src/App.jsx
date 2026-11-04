@@ -12,6 +12,7 @@ import { useAiConsole } from "./hooks/useAiConsole";
 import { useAuth } from "./hooks/useAuth";
 import { ToastProvider } from "./context/ToastProvider.jsx";
 import {ResetPasswordPage} from "./pages/ResetPassword.jsx";
+import {RecentBillsPage} from "./pages/RecentBills.jsx";
 
 export default function App() {
     const [selectedState, setSelectedState] = useState("ALL");
@@ -76,6 +77,7 @@ export default function App() {
                             <Route path="/analytics" element={<AnalyticsPage />} />
                             <Route path="/reset-password" element={<ResetPasswordPage />} />
                             <Route path="/about" element={<About />} />
+                            <Route path="/bills" element={<RecentBillsPage />} />
                             <Route
                                 path="*"
                                 element={
