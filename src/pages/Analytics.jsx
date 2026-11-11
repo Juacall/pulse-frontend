@@ -3,33 +3,24 @@ import {
     BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
     PieChart, Pie, Cell
 } from 'recharts';
+import { TopDonorsLeaderboard } from '../components/TopDonorsLeaderboard';
+import { SuperPacImpactDrilldown } from '../components/SuperPacImpactDrilldown';
+import { StateFinanceDrilldown } from '../components/StateFinanceDrilldown';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
 
-// All 50 US State Postal Abbreviations
-const US_STATES = [
-    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
-];
-
 export function AnalyticsPage() {
+    const [activeTab, setActiveTab] = useState('donors'); // 'donors' | 'charts' | 'state_drilldown'
+    const [donorSubTab, setDonorSubTab] = useState('direct'); // 'direct' | 'super_pacs'
+
     const [nationalSummary, setNationalSummary] = useState(null);
     const [stateData, setStateData] = useState([]);
     const [incumbentData, setIncumbentData] = useState([]);
-
-    // State Drilldown States
-    const [selectedState, setSelectedState] = useState('WA');
-    const [stateIncumbentData, setStateIncumbentData] = useState([]);
-    const [stateIncumbentLoading, setStateIncumbentLoading] = useState(false);
-
-    // Global Initial Page Loading
     const [pageLoading, setPageLoading] = useState(true);
+
     const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
-    // 1. Initial Load for Page-Level Data (Runs Once On Mount)
+    // Initial Load for Macro Analytics
     useEffect(() => {
         async function fetchPageAnalytics() {
             try {
@@ -53,26 +44,6 @@ export function AnalyticsPage() {
         fetchPageAnalytics();
     }, []);
 
-    // 2. Isolated Load for State Drilldown (Runs On State Change Without Reloading Full Page)
-    useEffect(() => {
-        async function fetchStateIncumbentData() {
-            try {
-                setStateIncumbentLoading(true);
-                const res = await fetch(`${API_BASE_URL}/api/analytics/donations/by-state/${selectedState}/incumbent-vs-challenger`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setStateIncumbentData(data);
-                }
-            } catch (error) {
-                console.error(`Failed to fetch incumbent breakdown for state ${selectedState}:`, error);
-            } finally {
-                setStateIncumbentLoading(false);
-            }
-        }
-
-        fetchStateIncumbentData();
-    }, [selectedState]);
-
     if (pageLoading) {
         return <div className="p-8 text-slate-200 font-mono">Loading campaign finance analytics...</div>;
     }
@@ -86,13 +57,49 @@ export function AnalyticsPage() {
     return (
         <div className="min-h-screen bg-slate-950 text-slate-100 p-8 space-y-8">
 
-            {/* HEADER */}
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Campaign Finance Analytics</h1>
-                <p className="text-slate-400 mt-1">Macro insights across OpenFEC summary metrics and donor profiles.</p>
+            {/* HEADER & MAIN PAGE TABS */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Campaign Finance Analytics</h1>
+                    <p className="text-slate-400 mt-1">Macro insights, donor rankings, and outside spending drill-downs.</p>
+                </div>
+
+                {/* PRIMARY NAVIGATION TABS */}
+                <div className="flex bg-slate-900 border border-slate-800 p-1 rounded-xl self-start md:self-auto">
+                    <button
+                        onClick={() => setActiveTab('donors')}
+                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+                            activeTab === 'donors'
+                                ? 'bg-cyan-500 text-slate-950 shadow-md'
+                                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                        }`}
+                    >
+                        Top Donors & Super PACs
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('state_drilldown')}
+                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+                            activeTab === 'state_drilldown'
+                                ? 'bg-cyan-500 text-slate-950 shadow-md'
+                                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                        }`}
+                    >
+                        State Drill-Down
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('charts')}
+                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+                            activeTab === 'charts'
+                                ? 'bg-cyan-500 text-slate-950 shadow-md'
+                                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                        }`}
+                    >
+                        Macro Overview & Charts
+                    </button>
+                </div>
             </div>
 
-            {/* SECTION 1: MACRO KPI CARDS */}
+            {/* MACRO KPI CARDS (Always Visible) */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
                     <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Raised</p>
@@ -123,104 +130,118 @@ export function AnalyticsPage() {
                 </div>
             </div>
 
-            {/* SECTION 2: DONOR COMPOSITION & INCUMBENT VS CHALLENGER */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* TAB 1: TOP DONORS & SUPER PACS */}
+            {activeTab === 'donors' && (
+                <div className="space-y-6">
+                    {/* SUB-TAB CONTROL */}
+                    <div className="flex border-b border-slate-800 space-x-6">
+                        <button
+                            onClick={() => setDonorSubTab('direct')}
+                            className={`pb-3 text-sm font-semibold transition-all relative ${
+                                donorSubTab === 'direct'
+                                    ? 'text-cyan-400 border-b-2 border-cyan-500'
+                                    : 'text-slate-400 hover:text-white'
+                            }`}
+                        >
+                            Direct Candidate Contributions (PACs & Orgs)
+                        </button>
+                        <button
+                            onClick={() => setDonorSubTab('super_pacs')}
+                            className={`pb-3 text-sm font-semibold transition-all relative ${
+                                donorSubTab === 'super_pacs'
+                                    ? 'text-cyan-400 border-b-2 border-cyan-500'
+                                    : 'text-slate-400 hover:text-white'
+                            }`}
+                        >
+                            Super PAC Outside Spending Drill-Down
+                        </button>
+                    </div>
 
-                {/* National Composition Pie Chart */}
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                    <h2 className="text-lg font-semibold mb-4">National Donor Composition</h2>
-                    <div className="h-72 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={pieData}
-                                    dataKey="value"
-                                    nameKey="name"
-                                    cx="50%"
-                                    cy="50%"
-                                    outerRadius={90}
-                                    innerRadius={50}
-                                    paddingAngle={4}
-                                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                                >
-                                    {pieData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip formatter={(value) => `$${(value / 1e6).toFixed(1)}M`} />
-                            </PieChart>
-                        </ResponsiveContainer>
+                    {/* SUB-TAB CONTENT */}
+                    {donorSubTab === 'direct' ? (
+                        <TopDonorsLeaderboard />
+                    ) : (
+                        <SuperPacImpactDrilldown />
+                    )}
+                </div>
+            )}
+
+            {/* TAB 2: STATE DRILL-DOWN */}
+            {activeTab === 'state_drilldown' && (
+                <div className="space-y-6">
+                    <StateFinanceDrilldown />
+                </div>
+            )}
+
+            {/* TAB 3: MACRO CHARTS & OVERVIEW */}
+            {activeTab === 'charts' && (
+                <div className="space-y-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Donor Composition */}
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                            <h2 className="text-lg font-semibold mb-4">National Donor Composition</h2>
+                            <div className="h-72 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={pieData}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            cx="50%"
+                                            cy="50%"
+                                            outerRadius={90}
+                                            innerRadius={50}
+                                            paddingAngle={4}
+                                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                        >
+                                            {pieData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip formatter={(value) => `$${(value / 1e6).toFixed(1)}M`} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Incumbents vs Challengers */}
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                            <h2 className="text-lg font-semibold mb-4">Incumbents vs. Challengers (National)</h2>
+                            <div className="h-72 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={incumbentData}>
+                                        <XAxis dataKey="category" stroke="#94a3b8" />
+                                        <YAxis stroke="#94a3b8" tickFormatter={(val) => `$${(val / 1e6).toFixed(0)}M`} />
+                                        <Tooltip formatter={(val) => `$${(val / 1e6).toFixed(1)}M`} />
+                                        <Legend />
+                                        <Bar dataKey="total_grassroots_dollars" name="Grassroots" fill="#10b981" stackId="a" />
+                                        <Bar dataKey="total_large_donor_dollars" name="Large Individual" fill="#3b82f6" stackId="a" />
+                                        <Bar dataKey="total_pac_dollars" name="PACs" fill="#f59e0b" stackId="a" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Top 15 States Bar Chart */}
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                        <h2 className="text-lg font-semibold mb-4">Top 15 States by Total Campaign Receipts</h2>
+                        <div className="h-80 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={stateData}>
+                                    <XAxis dataKey="state" stroke="#94a3b8" />
+                                    <YAxis stroke="#94a3b8" tickFormatter={(val) => `$${(val / 1e6).toFixed(0)}M`} />
+                                    <Tooltip formatter={(val) => `$${(val / 1e6).toFixed(1)}M`} />
+                                    <Legend />
+                                    <Bar dataKey="total_grassroots_dollars" name="Grassroots (<= $200)" fill="#10b981" stackId="a" />
+                                    <Bar dataKey="total_large_donor_dollars" name="Large Individual (> $200)" fill="#3b82f6" stackId="a" />
+                                    <Bar dataKey="total_pac_dollars" name="PACs" fill="#f59e0b" stackId="a" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
                 </div>
-
-                {/* National Incumbents vs Challengers */}
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                    <h2 className="text-lg font-semibold mb-4">Incumbents vs. Challengers (National)</h2>
-                    <div className="h-72 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={incumbentData}>
-                                <XAxis dataKey="category" stroke="#94a3b8" />
-                                <YAxis stroke="#94a3b8" tickFormatter={(val) => `$${(val / 1e6).toFixed(0)}M`} />
-                                <Tooltip formatter={(val) => `$${(val / 1e6).toFixed(1)}M`} />
-                                <Legend />
-                                <Bar dataKey="total_grassroots_dollars" name="Grassroots" fill="#10b981" stackId="a" />
-                                <Bar dataKey="total_large_donor_dollars" name="Large Individual" fill="#3b82f6" stackId="a" />
-                                <Bar dataKey="total_pac_dollars" name="PACs" fill="#f59e0b" stackId="a" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            </div>
-
-            {/* SECTION 3: BY-STATE STACKED BAR COMPARISON */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                <h2 className="text-lg font-semibold mb-4">Top 15 States by Total Campaign Receipts</h2>
-                <div className="h-80 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={stateData}>
-                            <XAxis dataKey="state" stroke="#94a3b8" />
-                            <YAxis stroke="#94a3b8" tickFormatter={(val) => `$${(val / 1e6).toFixed(0)}M`} />
-                            <Tooltip formatter={(val) => `$${(val / 1e6).toFixed(1)}M`} />
-                            <Legend />
-                            <Bar dataKey="total_grassroots_dollars" name="Grassroots (<= $200)" fill="#10b981" stackId="a" />
-                            <Bar dataKey="total_large_donor_dollars" name="Large Individual (> $200)" fill="#3b82f6" stackId="a" />
-                            <Bar dataKey="total_pac_dollars" name="PACs" fill="#f59e0b" stackId="a" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
-
-            {/* SECTION 4: STATE-SPECIFIC DRILLDOWN */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold">
-                        State Drilldown: Incumbent Parity {stateIncumbentLoading && <span className="text-xs text-slate-500 font-mono ml-2">(Updating...)</span>}
-                    </h2>
-                    <select
-                        value={selectedState}
-                        onChange={(e) => setSelectedState(e.target.value)}
-                        className="bg-slate-800 border border-slate-700 text-white px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                    >
-                        {US_STATES.map((st) => (
-                            <option key={st} value={st}>{st}</option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="h-72 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={stateIncumbentData}>
-                            <XAxis dataKey="category" stroke="#94a3b8" />
-                            <YAxis stroke="#94a3b8" tickFormatter={(val) => `$${(val / 1e6).toFixed(1)}M`} />
-                            <Tooltip formatter={(val) => `$${(val / 1e6).toFixed(2)}M`} />
-                            <Legend />
-                            <Bar dataKey="total_grassroots_dollars" name="Grassroots" fill="#10b981" />
-                            <Bar dataKey="total_large_donor_dollars" name="Large Donors" fill="#3b82f6" />
-                            <Bar dataKey="total_pac_dollars" name="PACs" fill="#f59e0b" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            </div>
+            )}
 
         </div>
     );
