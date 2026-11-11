@@ -1,5 +1,5 @@
 // src/pages/RecentBillsPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     FileText,
     CheckCircle2,
@@ -8,69 +8,102 @@ import {
     ChevronUp,
     ExternalLink,
     RefreshCw,
-    AlertCircle
+    AlertCircle,
+    ArrowUp
 } from 'lucide-react';
 import { partyBadgeClass } from "../utils/party";
 
 export function RecentBillsPage() {
     const [bills, setBills] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState(null);
     const [expandedBillId, setExpandedBillId] = useState(null);
 
-    // Controls: Feed type ('introduced' | 'passed') & Chamber ('ALL' | 'House' | 'Senate')
-    const [feedType, setFeedType] = useState('introduced');
+    // Pagination & Feed State
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [feedType, setFeedType] = useState('introduced'); // 'introduced' | 'passed'
     const [chamberFilter, setChamberFilter] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
 
+    // Debounce search input
     useEffect(() => {
-        let isMounted = true;
-        const fetchBills = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
-                const endpoint = feedType === 'passed' ? '/api/bills/passed' : '/api/bills/recent';
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
-                // Set default limit to 10 per chamber (20 total when ALL is selected)
-                const params = new URLSearchParams({ per_chamber_limit: '10' });
-                if (chamberFilter !== 'ALL') {
-                    params.append('chamber', chamberFilter);
-                }
+    // Reset list and page state when filters change
+    useEffect(() => {
+        setBills([]);
+        setPage(1);
+        setHasMore(true);
+    }, [feedType, chamberFilter, debouncedSearch]);
 
-                const res = await fetch(`${baseUrl}${endpoint}?${params.toString()}`);
-                if (!res.ok) throw new Error(`Failed to load ${feedType} bills`);
+    // Main fetch function
+    const fetchBills = useCallback(async (targetPage, isInitial = false) => {
+        if (isInitial) setLoading(true);
+        else setLoadingMore(true);
+        setError(null);
 
-                const data = await res.json();
+        try {
+            const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
+            const endpoint = feedType === 'passed' ? '/api/bills/passed' : '/api/bills/recent';
 
-                if (isMounted) {
-                    setBills(Array.isArray(data) ? data : data.bills || []);
-                }
-            } catch (err) {
-                if (isMounted) setError(err.message);
-            } finally {
-                if (isMounted) setLoading(false);
+            const params = new URLSearchParams({
+                per_chamber_limit: '10',
+                page: targetPage.toString()
+            });
+
+            if (chamberFilter !== 'ALL') params.append('chamber', chamberFilter);
+            if (debouncedSearch.trim()) params.append('q', debouncedSearch.trim());
+
+            const res = await fetch(`${baseUrl}${endpoint}?${params.toString()}`);
+            if (!res.ok) throw new Error(`Failed to load ${feedType} bills`);
+
+            const data = await res.json();
+            const newBills = data.bills || [];
+
+            setBills(prev => targetPage === 1 ? newBills : [...prev, ...newBills]);
+            setHasMore(data.has_more ?? newBills.length > 0);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
+        }
+    }, [feedType, chamberFilter, debouncedSearch]);
+
+    // Initial load & page changes
+    useEffect(() => {
+        fetchBills(page, page === 1);
+    }, [page, fetchBills]);
+
+    // Infinite Scroll Handler
+    useEffect(() => {
+        const handleScroll = () => {
+            if (loading || loadingMore || !hasMore) return;
+
+            const scrollHeight = document.documentElement.scrollHeight;
+            const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+            const clientHeight = document.documentElement.clientHeight;
+
+            // Trigger fetch when user is within 300px of the bottom
+            if (scrollTop + clientHeight >= scrollHeight - 300) {
+                setPage(prevPage => prevPage + 1);
             }
         };
 
-        fetchBills();
-        return () => { isMounted = false; };
-    }, [feedType, chamberFilter]);
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [loading, loadingMore, hasMore]);
 
     const toggleExpand = (billId) => {
         setExpandedBillId(prev => prev === billId ? null : billId);
     };
-
-    // Client-side search filter
-    const filteredBills = bills.filter(bill => {
-        if (!searchQuery) return true;
-        const query = searchQuery.toLowerCase();
-        return (
-            bill.title?.toLowerCase().includes(query) ||
-            bill.bill_number?.toLowerCase().includes(query) ||
-            bill.sponsor_name?.toLowerCase().includes(query)
-        );
-    });
 
     return (
         <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
@@ -90,7 +123,7 @@ export function RecentBillsPage() {
                     </p>
                 </div>
 
-                {/* Sub-Nav Feed Switcher: Introduced vs Passed */}
+                {/* Feed Switcher */}
                 <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 self-start md:self-auto">
                     <button
                         onClick={() => setFeedType('introduced')}
@@ -147,7 +180,7 @@ export function RecentBillsPage() {
                 </div>
             </div>
 
-            {/* Feed Content */}
+            {/* Initial Loading State */}
             {loading ? (
                 <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-12 text-center">
                     <RefreshCw className={`w-8 h-8 animate-spin mx-auto mb-3 ${feedType === 'passed' ? 'text-emerald-400' : 'text-cyan-400'}`} />
@@ -158,14 +191,14 @@ export function RecentBillsPage() {
                     <AlertCircle className="w-8 h-8 text-rose-400 mx-auto mb-2" />
                     <p className="text-sm font-bold">{error}</p>
                 </div>
-            ) : filteredBills.length === 0 ? (
+            ) : bills.length === 0 ? (
                 <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-12 text-center text-slate-400">
-                    <p className="text-sm">No {feedType} {chamberFilter !== 'ALL' ? chamberFilter : ''} bills match your search criteria.</p>
+                    <p className="text-sm">No {feedType} {chamberFilter !== 'ALL' ? chamberFilter : ''} bills match your criteria.</p>
                 </div>
             ) : (
                 <div className="space-y-4">
-                    {filteredBills.map((bill) => {
-                        const billId = bill.bill_id || bill.bill_number;
+                    {bills.map((bill, idx) => {
+                        const billId = bill.bill_id || `${bill.bill_number}-${idx}`;
                         const isExpanded = expandedBillId === billId;
 
                         return (
@@ -179,7 +212,6 @@ export function RecentBillsPage() {
                                             {bill.bill_number}
                                         </span>
 
-                                        {/* Status / Passed Tag */}
                                         {bill.bill_status && (
                                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                                                 bill.bill_status === 'Became Law'
@@ -221,7 +253,6 @@ export function RecentBillsPage() {
                                     {bill.title}
                                 </h3>
 
-                                {/* CRS Summary or Procedural Action Fallback */}
                                 <div className="mt-2">
                                     {bill.summary ? (
                                         <>
@@ -288,6 +319,27 @@ export function RecentBillsPage() {
                             </div>
                         );
                     })}
+
+                    {/* Infinite Scroll Spinner / End Indicator */}
+                    {loadingMore && (
+                        <div className="py-6 text-center">
+                            <RefreshCw className={`w-6 h-6 animate-spin mx-auto ${feedType === 'passed' ? 'text-emerald-400' : 'text-cyan-400'}`} />
+                            <p className="text-xs text-slate-500 mt-2">Fetching more records...</p>
+                        </div>
+                    )}
+
+                    {!hasMore && bills.length > 0 && (
+                        <div className="py-8 text-center text-xs text-slate-500 border-t border-slate-800/60 mt-6 flex items-center justify-center space-x-2">
+                            <span>You've reached the end of recent records for this selection.</span>
+                            <button
+                                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                                className="text-cyan-400 hover:text-cyan-300 font-semibold flex items-center space-x-1"
+                            >
+                                <span>Back to top</span>
+                                <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
