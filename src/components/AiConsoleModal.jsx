@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Cpu, X, RefreshCw, Terminal, Database, Sparkles } from 'lucide-react';
 import { DataResultDisplay } from './DataResultDisplay';
+import { useAuth } from '../hooks/useAuth.js';
+import { useAuthModal } from '../hooks/useAuthModal.js';
 
 export function AiConsoleModal({ isOpen, onClose, onExecuteQuery, aiLoading, aiResult }) {
     const [queryInput, setQueryInput] = useState('');
+    const { user } = useAuth();
+    const { openAuthModal } = useAuthModal();
 
     // Close modal on Escape key press
     useEffect(() => {
@@ -21,6 +25,10 @@ export function AiConsoleModal({ isOpen, onClose, onExecuteQuery, aiLoading, aiR
     const handleRunQuery = (prompt) => {
         const targetQuery = prompt || queryInput;
         if (!targetQuery.trim()) return;
+        if (!user) {
+            openAuthModal('login');
+            return;
+        }
         if (prompt) setQueryInput(prompt);
         onExecuteQuery(targetQuery);
     };
