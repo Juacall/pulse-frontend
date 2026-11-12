@@ -1,6 +1,6 @@
 // src/components/VoteComponent.jsx
 import React, { useState, useMemo } from 'react';
-import { MinusCircle, ThumbsDown, ThumbsUp, Vote, LogIn, ShieldAlert } from 'lucide-react';
+import { MinusCircle, ThumbsDown, ThumbsUp, Vote, LogIn } from 'lucide-react';
 import { useAuthModal } from "../hooks/useAuthModal.js";
 import { supabase } from "../lib/supabase.js";
 import { useToast } from "../hooks/useToast.js";
@@ -18,8 +18,7 @@ export function VoteComponent({
     const {
         user: contextUser,
         userVotesMap,
-        updateUserVoteInMap,
-        verifyIdentity
+        updateUserVoteInMap
     } = useAuth();
 
     // Prefer context user state, fallback to prop if necessary
@@ -41,9 +40,6 @@ export function VoteComponent({
         setOptimisticStance(null);
         setServerStats(null);
     }
-
-    // Unified verification flag check
-    const isVerified = Boolean(user?.is_identity_verified ?? user?.user_metadata?.is_identity_verified);
 
     // Persistent stance lookup from AuthContext votes map
     const persistentStance = useMemo(() => {
@@ -102,19 +98,6 @@ export function VoteComponent({
     const neutralPct = total > 0 ? (stats.neutral / total) * 100 : 100;
     const disapprovePct = total > 0 ? (stats.disapprove / total) * 100 : 0;
 
-    // Trigger context verification handler directly
-    const handleVerifyIdentity = async () => {
-        try {
-            if (verifyIdentity) {
-                await verifyIdentity();
-            } else {
-                openAuthModal("login");
-            }
-        } catch (err) {
-            console.error('Failed to initiate identity verification:', err);
-            notify(`Verification error: ${err.message}`, 'error');
-        }
-    };
 
     const handleVote = async (newStance) => {
         const targetStance = newStance.toLowerCase();
@@ -123,11 +106,6 @@ export function VoteComponent({
         if (!user) {
             notify("Please sign in to participate in voting.", "error");
             openAuthModal("login");
-            return;
-        }
-
-        if (!isVerified) {
-            notify("Constituent identity verification required to cast a vote.", "error");
             return;
         }
 
@@ -295,20 +273,7 @@ export function VoteComponent({
                         Sign In
                     </button>
                 </div>
-            ) : !isVerified && (
-                <div className="mt-3 p-2.5 rounded-xl bg-amber-950/40 border border-amber-800/50 flex items-center justify-between text-xs text-amber-200">
-                    <span className="flex items-center gap-1.5">
-                        <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
-                        Stripe identity verification required to record votes.
-                    </span>
-                    <button
-                        onClick={handleVerifyIdentity}
-                        className="text-amber-400 font-bold underline hover:text-amber-300 transition-colors shrink-0 ml-2"
-                    >
-                        Verify ID
-                    </button>
-                </div>
-            )}
+            ) : null}
         </div>
     );
 }

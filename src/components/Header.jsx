@@ -9,10 +9,6 @@ export function Header({ setIsAiModalOpen, onOpenAccount }) {
     const { openAuthModal } = useAuthModal();
 
     const handleAiConsoleClick = () => {
-        if (!user) {
-            openAuthModal('login');
-            return;
-        }
         setIsAiModalOpen(true);
     };
 
