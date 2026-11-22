@@ -98,7 +98,7 @@ export function CampaignContributionSummary({ politicianId }) {
           <span>Top Donors</span>
         </h3>
         <p className="text-xs text-slate-500 mb-4">
-          Employer-grouped contribution totals, not individual donors (2026 cycle).
+          Grouped contribution totals.
         </p>
         {data.donorsStatus === "loading" ? (
           <p className="text-sm text-slate-400" role="status">Loading top donors…</p>

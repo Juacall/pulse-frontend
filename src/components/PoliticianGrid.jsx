@@ -161,24 +161,6 @@ export function PoliticianGrid({
                         </>
                     )}
                 </h2>
-
-                {/* View Switcher Button */}
-                <button
-                    onClick={toggleViewMode}
-                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-800/60 transition-colors shadow-sm"
-                >
-                    {viewMode === 'politicians' ? (
-                        <>
-                            <Vote className="w-3.5 h-3.5 text-cyan-400" />
-                            <span>Show Elections</span>
-                        </>
-                    ) : (
-                        <>
-                            <Users className="w-3.5 h-3.5 text-cyan-400" />
-                            <span>Show Politicians</span>
-                        </>
-                    )}
-                </button>
             </div>
             {content}
         </div>
